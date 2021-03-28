@@ -995,7 +995,7 @@ public class MoveGenerator {
         }
         //down-left
         moveBitboard = (WK & ~FILE_A & ~RANK_1) << 7 & ~WA;
-        if (moveBitboard != 0 & attackerBoardW(bitboards, ((WK & ~FILE_A & ~RANK_1) << 7)) == 0 && nextToBlackKing(bitboards, ((WK & ~RANK_1 & ~FILE_A) << 7)) == false) {
+        if (moveBitboard != 0 && attackerBoardW(bitboards, ((WK & ~FILE_A & ~RANK_1) << 7)) == 0 && nextToBlackKing(bitboards, ((WK & ~RANK_1 & ~FILE_A) << 7)) == false) {
             index = Long.numberOfTrailingZeros(moveBitboard);
             moves += ("" + (index / 8 - 1) + (index % 8 + 1) + (index / 8) + (index % 8) + " ");
         }
@@ -1124,7 +1124,7 @@ public class MoveGenerator {
         return 0L;
     }
 
-    private static long blockerBoardW(Bitboards bitboards, long square) {
+    public static long blockerBoardW(Bitboards bitboards, long square) {
         if (square != 0) {
             long A = bitboards.A;
             int index = Long.numberOfTrailingZeros(square);
@@ -1144,7 +1144,7 @@ public class MoveGenerator {
         return 0L;
     }
 
-    private static long blockerBoardB(Bitboards bitboards, long square) {
+    public static long blockerBoardB(Bitboards bitboards, long square) {
         if (square != 0) {
             long A = bitboards.A;
             int index = Long.numberOfTrailingZeros(square);
@@ -1232,7 +1232,6 @@ public class MoveGenerator {
         if (diag2Pinned != 0) {
             pinned |= diag2King;
         }
-
         long adiag1King = ((A & antiDiagonalMasks[kingIndex / 8 + 7 - kingIndex % 8]) ^ ((A & antiDiagonalMasks[kingIndex / 8 + 7 - kingIndex % 8]) - (2 * WK))) & antiDiagonalMasks[kingIndex / 8 + 7 - kingIndex % 8] & WA;
         if (adiag1King != 0) {
             pinnedIndex = Long.numberOfTrailingZeros(adiag1King);
@@ -1530,6 +1529,10 @@ public class MoveGenerator {
                 pieceCaptured = 'p';
                 bitboards.BP = bitboards.BP & ~finalSquare;
                 hashKey ^= randomIntegers[11][finalSquareIndex];
+            } else if ((bitboards.BK & finalSquare) != 0) {
+                pieceCaptured = 'k';
+                bitboards.BK = bitboards.BK & ~finalSquare;
+                hashKey ^= randomIntegers[6][finalSquareIndex];
             }
             bitboards.BA = bitboards.BK | bitboards.BQ | bitboards.BR | bitboards.BN | bitboards.BB | bitboards.BP;
             bitboards.turn = false;
@@ -1631,6 +1634,10 @@ public class MoveGenerator {
                 pieceCaptured = 'P';
                 bitboards.WP = bitboards.WP & ~finalSquare;
                 hashKey ^= randomIntegers[5][finalSquareIndex];
+            } else if ((bitboards.WK & finalSquare) != 0) {
+                pieceCaptured = 'K';
+                bitboards.WK = bitboards.WK & ~finalSquare;
+                hashKey ^= randomIntegers[0][finalSquareIndex];
             }
             bitboards.WA = bitboards.WK | bitboards.WQ | bitboards.WR | bitboards.WN | bitboards.WB | bitboards.WP;
             bitboards.turn = true;
@@ -1651,13 +1658,173 @@ public class MoveGenerator {
         bitboards.hashKey = hashKey;
     }
 
-    private static boolean nextToWhiteKing(Bitboards bitboards, long BK) {
+    public static boolean nextToWhiteKing(Bitboards bitboards, long BK) {
         long kingAttacks = ((BK >>> 1 & ~FILE_H) | (BK << 1 & ~FILE_A) | (BK >>> 8 & ~RANK_1) | (BK << 8 & ~RANK_8) | (BK >>> 7 & ~RANK_1 & ~FILE_A) | (BK << 7 & ~FILE_H & ~RANK_8) | (BK >>> 9 & ~FILE_H & ~RANK_1) | (BK << 9 & ~RANK_8 & ~FILE_A)) & bitboards.WK;
         return kingAttacks != 0;
     }
 
-    private static boolean nextToBlackKing(Bitboards bitboards, long WK) {
+    public static boolean nextToBlackKing(Bitboards bitboards, long WK) {
         long kingAttacks = ((WK >>> 1 & ~FILE_H) | (WK << 1 & ~FILE_A) | (WK >>> 8 & ~RANK_1) | (WK << 8 & ~RANK_8) | (WK >>> 7 & ~RANK_1 & ~FILE_A) | (WK << 7 & ~FILE_H & ~RANK_8) | (WK >>> 9 & ~FILE_H & ~RANK_1) | (WK << 9 & ~RANK_8 & ~FILE_A)) & bitboards.BK;
         return kingAttacks != 0;
+    }
+
+    static String generateMovesWFog(Bitboards bitboards) {
+        String moves = "";
+        moves = moves.concat(generatePawnMovesW(bitboards));
+        moves = moves.concat(generateKnightMovesW(bitboards));
+        moves = moves.concat(generateRookMovesW(bitboards));
+        moves = moves.concat(generateBishopMovesW(bitboards));
+        moves = moves.concat(generateQueenMovesW(bitboards));
+        moves = moves.concat(generateKingMovesWFog(bitboards));
+        return moves;
+    }
+
+    static String generateMovesBFog(Bitboards bitboards) {
+        String moves = "";
+        moves = moves.concat(generatePawnMovesB(bitboards));
+        moves = moves.concat(generateKnightMovesB(bitboards));
+        moves = moves.concat(generateRookMovesB(bitboards));
+        moves = moves.concat(generateBishopMovesB(bitboards));
+        moves = moves.concat(generateQueenMovesB(bitboards));
+        moves = moves.concat(generateKingMovesBFog(bitboards));
+        return moves;
+    }
+
+    private static String generateKingMovesWFog(Bitboards bitboards) {
+        String moves = "";
+        long WK = bitboards.WK;
+        long WA = bitboards.WA;
+        long A = bitboards.A;
+        long moveBitboard;
+        boolean[] castle = bitboards.castle;
+        int index;
+        //up
+
+        moveBitboard = (WK & ~RANK_8) >>> 8 & ~WA;
+        if (moveBitboard != 0) {
+            index = Long.numberOfTrailingZeros(moveBitboard);
+            moves += ("" + (index / 8 + 1) + (index % 8) + (index / 8) + (index % 8) + " ");
+        }
+        //down
+        moveBitboard = (WK & ~RANK_1) << 8 & ~WA;
+        if (moveBitboard != 0) {
+            index = Long.numberOfTrailingZeros(moveBitboard);
+            moves += ("" + (index / 8 - 1) + (index % 8) + (index / 8) + (index % 8) + " ");
+        }
+        //left
+        moveBitboard = (WK & ~FILE_A) >>> 1 & ~WA;
+        if (moveBitboard != 0) {
+            index = Long.numberOfTrailingZeros(moveBitboard);
+            moves += ("" + (index / 8) + (index % 8 + 1) + (index / 8) + (index % 8) + " ");
+        }
+        //right
+        moveBitboard = (WK & ~FILE_H) << 1 & ~WA;
+        if (moveBitboard != 0) {
+            index = Long.numberOfTrailingZeros(moveBitboard);
+            moves += ("" + (index / 8) + (index % 8 - 1) + (index / 8) + (index % 8) + " ");
+        }
+        //up-left
+        moveBitboard = (WK & ~FILE_A & ~RANK_8) >>> 9 & ~WA;
+        if (moveBitboard != 0) {
+            index = Long.numberOfTrailingZeros(moveBitboard);
+            moves += ("" + (index / 8 + 1) + (index % 8 + 1) + (index / 8) + (index % 8) + " ");
+        }
+        //up-right
+        moveBitboard = (WK & ~FILE_H & ~RANK_8) >>> 7 & ~WA;
+        if (moveBitboard != 0) {
+            index = Long.numberOfTrailingZeros(moveBitboard);
+            moves += ("" + (index / 8 + 1) + (index % 8 - 1) + (index / 8) + (index % 8) + " ");
+        }
+        //down-left
+        moveBitboard = (WK & ~FILE_A & ~RANK_1) << 7 & ~WA;
+        if (moveBitboard != 0) {
+            index = Long.numberOfTrailingZeros(moveBitboard);
+            moves += ("" + (index / 8 - 1) + (index % 8 + 1) + (index / 8) + (index % 8) + " ");
+        }
+        //down-right
+        moveBitboard = (WK & ~FILE_H & ~RANK_1) << 9 & ~WA;
+        if (moveBitboard != 0) {
+            index = Long.numberOfTrailingZeros(moveBitboard);
+            moves += ("" + (index / 8 - 1) + (index % 8 - 1) + (index / 8) + (index % 8) + " ");
+        }
+
+        //castle short
+        if (castle[0] && (RANK_1 & FILE_H & bitboards.WR) != 0 && (RANK_1 & (fileMasks[5] | fileMasks[6]) & A) == 0) {
+            moves += ("7476 ");
+        }
+        if (castle[1] && (RANK_1 & FILE_A & bitboards.WR) != 0 && (RANK_1 & (fileMasks[1] | fileMasks[2] | fileMasks[3]) & A) == 0) {
+            moves += ("7472 ");
+        }
+
+        return moves;
+    }
+
+    private static String generateKingMovesBFog(Bitboards bitboards) {
+        String moves = "";
+        long BK = bitboards.BK;
+        long BA = bitboards.BA;
+        long A = bitboards.A;
+        long moveBitboard;
+        boolean[] castle = bitboards.castle;
+        int index;
+        //up
+        moveBitboard = (BK & ~RANK_8) >>> 8 & ~BA;
+        if (moveBitboard != 0) {
+            index = Long.numberOfTrailingZeros(moveBitboard);
+            moves += ("" + (index / 8 + 1) + (index % 8) + (index / 8) + (index % 8) + " ");
+        }
+        //down
+        moveBitboard = (BK & ~RANK_1) << 8 & ~BA;
+        if (moveBitboard != 0) {
+            index = Long.numberOfTrailingZeros(moveBitboard);
+            moves += ("" + (index / 8 - 1) + (index % 8) + (index / 8) + (index % 8) + " ");
+        }
+        //left
+        moveBitboard = (BK & ~FILE_A) >>> 1 & ~BA;
+        if (moveBitboard != 0) {
+            index = Long.numberOfTrailingZeros(moveBitboard);
+            moves += ("" + (index / 8) + (index % 8 + 1) + (index / 8) + (index % 8) + " ");
+        }
+        //right
+        moveBitboard = (BK & ~FILE_H) << 1 & ~BA;
+        if (moveBitboard != 0) {
+            index = Long.numberOfTrailingZeros(moveBitboard);
+            moves += ("" + (index / 8) + (index % 8 - 1) + (index / 8) + (index % 8) + " ");
+        }
+        //up-left
+        moveBitboard = (BK & ~FILE_A & ~RANK_8) >>> 9 & ~BA;
+        if (moveBitboard != 0) {
+            index = Long.numberOfTrailingZeros(moveBitboard);
+            moves += ("" + (index / 8 + 1) + (index % 8 + 1) + (index / 8) + (index % 8) + " ");
+        }
+        //up-right
+        moveBitboard = (BK & ~FILE_H & ~RANK_8) >>> 7 & ~BA;
+        if (moveBitboard != 0) {
+            index = Long.numberOfTrailingZeros(moveBitboard);
+            moves += ("" + (index / 8 + 1) + (index % 8 - 1) + (index / 8) + (index % 8) + " ");
+        }
+        //down-left
+        moveBitboard = (BK & ~FILE_A & ~RANK_1) << 7 & ~BA;
+        if (moveBitboard != 0) {
+            index = Long.numberOfTrailingZeros(moveBitboard);
+            moves += ("" + (index / 8 - 1) + (index % 8 + 1) + (index / 8) + (index % 8) + " ");
+        }
+        //down-right
+        moveBitboard = (BK & ~FILE_H & ~RANK_1) << 9 & ~BA;
+        if (moveBitboard != 0) {
+            index = Long.numberOfTrailingZeros(moveBitboard);
+            moves += ("" + (index / 8 - 1) + (index % 8 - 1) + (index / 8) + (index % 8) + " ");
+        }
+
+        //castle short
+        if (castle[2] && (RANK_8 & FILE_H & bitboards.BR) != 0 && (RANK_8 & (fileMasks[5] | fileMasks[6]) & A) == 0) {
+            moves += ("0406 ");
+        }
+        //castle long
+        if (castle[3] && (RANK_8 & FILE_A & bitboards.BR) != 0 && (RANK_8 & (fileMasks[1] | fileMasks[2] | fileMasks[3]) & A) == 0) {
+            moves += ("0402 ");
+        }
+
+        return moves;
     }
 }

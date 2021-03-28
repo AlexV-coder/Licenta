@@ -14,7 +14,6 @@ import static server.MoveGenerator.attackerBoardW;
 import static server.MoveGenerator.generateMovesB;
 import static server.MoveGenerator.generateMovesW;
 import static server.MoveGenerator.makeMove;
-import static server.Utility.drawBitboard;
 import static server.Utility.transpose;
 
 /**

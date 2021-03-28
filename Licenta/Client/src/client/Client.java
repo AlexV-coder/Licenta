@@ -30,6 +30,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Polygon;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.Text;
@@ -46,10 +47,10 @@ public class Client extends Application {
     BufferedReader in;
     int id;
     String difficulty = "M";
-    volatile char turn;
-    volatile boolean stop = false;
     ClientThread clientThread;
     String colorChosen = "white";
+    int modeChosen = 0;
+    String[] modes = {"Regular", "Fog of War", "Battle Plan"};
 
     public Client() {
         try {
@@ -76,7 +77,6 @@ public class Client extends Application {
         Scene scene = new Scene(root);
         stage.setOnCloseRequest(e -> {
             try {
-                stop = true;
                 out.println("Quit");
                 out.flush();
                 socket.close();
@@ -125,7 +125,7 @@ public class Client extends Application {
         quit.setStyle("-fx-base: rgba(145, 111, 38, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt;");
         VBox menu = new VBox();
         menu.setMaxSize(400, 500);
-        menu.setStyle("-fx-background-color: rgba(165, 111, 38, 0.6); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50;");
+        menu.setStyle("-fx-background-color: rgba(165, 111, 38, 0.7); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50; -fx-border-color: black;");
         menu.setSpacing(100);
         menu.setAlignment(Pos.CENTER);
         menu.getChildren().add(singlePlayer);
@@ -144,7 +144,7 @@ public class Client extends Application {
         root.setBackground(new Background(myBI));
         VBox diff = new VBox();
         diff.setMaxSize(400, 700);
-        diff.setStyle("-fx-background-color: rgba(165, 111, 38, 0.6); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50;");
+        diff.setStyle("-fx-background-color: rgba(165, 111, 38, 0.7); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50; -fx-border-color: black;");
         diff.setAlignment(Pos.CENTER);
         diff.setSpacing(100);
 
@@ -219,7 +219,7 @@ public class Client extends Application {
         back.setStyle("-fx-base: rgba(145, 111, 38, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt;");
 
         VBox menu = new VBox();
-        menu.setStyle("-fx-background-color: rgba(165, 111, 38, 0.6); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50;");
+        menu.setStyle("-fx-background-color: rgba(165, 111, 38, 0.7); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50; -fx-border-color: black;");
         menu.setSpacing(100);
         menu.setMaxSize(400, 500);
         menu.setAlignment(Pos.CENTER);
@@ -229,7 +229,7 @@ public class Client extends Application {
         root.getChildren().add(menu);
         return root;
     }
-    
+
     private StackPane getPlayCompMenu(Stage stage) {
         StackPane root = new StackPane();
         Text txt = new Text();
@@ -241,7 +241,7 @@ public class Client extends Application {
                 BackgroundSize.DEFAULT);
         root.setBackground(new Background(myBI));
         VBox menu = new VBox();
-        menu.setStyle("-fx-background-color: rgba(165, 111, 38, 0.6); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50;");
+        menu.setStyle("-fx-background-color: rgba(165, 111, 38, 0.7); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50; -fx-border-color: black;");
         menu.setSpacing(50);
         menu.setMaxSize(400, 450);
 
@@ -257,7 +257,7 @@ public class Client extends Application {
         play.setOnMouseClicked(e -> {
             out.println("Single player " + colorChosen + " " + difficulty);
             out.flush();
-            clientThread = new ClientThread(root, in, out, stage, stop, turn);
+            clientThread = new ClientThread(root, in, out, stage);
             clientThread.start();
         });
         play.setMinSize(250, 75);
@@ -267,7 +267,11 @@ public class Client extends Application {
         HBox colorChooser = new HBox();
         colorChooser.setAlignment(Pos.CENTER);
         ImageView imageView = new ImageView();
-        file = new File("Pieces\\W_King.png");
+        if (colorChosen.equals("white")) {
+            file = new File("Pieces\\W_King.png");
+        } else {
+            file = new File("Pieces\\B_King.png");
+        }
         Image image = new Image(file.toURI().toString());
         imageView.setImage(image);
         colorChooser.getChildren().add(imageView);
@@ -302,9 +306,9 @@ public class Client extends Application {
                 BackgroundSize.DEFAULT);
         root.setBackground(new Background(myBI));
         VBox menu = new VBox();
-        menu.setStyle("-fx-background-color: rgba(165, 111, 38, 0.6); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50;");
+        menu.setStyle("-fx-background-color: rgba(165, 111, 38, 0.7); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50; -fx-border-color: black;");
         menu.setSpacing(50);
-        menu.setMaxSize(400, 600);
+        menu.setMaxSize(400, 700);
 
         TextField tf = new TextField();
         tf.setMaxWidth(250);
@@ -325,15 +329,13 @@ public class Client extends Application {
                 id = Integer.valueOf(tf.getText());
                 String line;
                 try {
-                    out.println("Create lobby " + id + " " + colorChosen);
+                    out.println("Create lobby " + id + " " + colorChosen + " " + modes[modeChosen].split(" ")[0]);
                     out.flush();
-                    while ((line = in.readLine()) == null) {
-
-                    }
+                    line = in.readLine();
                     if (line.equals("Ok")) {
                         menu.getChildren().remove(txt);
                         stage.getScene().setRoot(getWaitingMenu(stage));
-                        clientThread = new ClientThread(root, in, out, stage, stop, turn);
+                        clientThread = new ClientThread(root, in, out, stage);
                         clientThread.start();
                     } else if (line.equals("Lobby already exists")) {
                         txt.setText(line);
@@ -352,7 +354,11 @@ public class Client extends Application {
         HBox colorChooser = new HBox();
         colorChooser.setAlignment(Pos.CENTER);
         ImageView imageView = new ImageView();
-        file = new File("Pieces\\W_King.png");
+        if (colorChosen.equals("white")) {
+            file = new File("Pieces\\W_King.png");
+        } else {
+            file = new File("Pieces\\B_King.png");
+        }
         Image image = new Image(file.toURI().toString());
         imageView.setImage(image);
         colorChooser.getChildren().add(imageView);
@@ -370,7 +376,46 @@ public class Client extends Application {
             }
         });
 
-        menu.getChildren().addAll(tf, create, colorChooser, back);
+        HBox modeChooser = new HBox();
+        modeChooser.setAlignment(Pos.CENTER);
+        modeChooser.setSpacing(50);
+        Text mode = new Text();
+        mode.setText("Regular");
+        mode.setFont(Font.font("Verdana", 24));
+        mode.setFill(Color.BLACK);
+
+        Polygon leftTriangle = new Polygon();
+        leftTriangle.setStroke(Color.WHITE);
+        leftTriangle.setFill(Color.rgb(125, 96, 32));
+        leftTriangle.getPoints().addAll(new Double[]{
+            0.0, 15.0,
+            30.0, 0.0,
+            30.0, 30.0});
+        leftTriangle.setOnMouseClicked(e -> {
+            modeChosen--;
+            if (modeChosen < 0) {
+                modeChosen = modes.length - 1;
+            }
+            mode.setText(modes[modeChosen]);
+        });
+
+        Polygon rightTriangle = new Polygon();
+        rightTriangle.setStroke(Color.WHITE);
+        rightTriangle.setFill(Color.rgb(125, 96, 32));
+        rightTriangle.getPoints().addAll(new Double[]{
+            160.0, 115.0,
+            130.0, 100.0,
+            130.0, 130.0});
+        rightTriangle.setOnMouseClicked(e -> {
+            modeChosen++;
+            if (modeChosen >= modes.length) {
+                modeChosen = 0;
+            }
+            mode.setText(modes[modeChosen]);
+        });
+
+        modeChooser.getChildren().addAll(leftTriangle, mode, rightTriangle);
+        menu.getChildren().addAll(tf, create, modeChooser, colorChooser, back);
         menu.setAlignment(Pos.CENTER);
         root.getChildren().add(menu);
         return root;
@@ -387,7 +432,7 @@ public class Client extends Application {
                 BackgroundSize.DEFAULT);
         root.setBackground(new Background(myBI));
         VBox menu = new VBox();
-        menu.setStyle("-fx-background-color: rgba(165, 111, 38, 0.6); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50;");
+        menu.setStyle("-fx-background-color: rgba(165, 111, 38, 0.7); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50; -fx-border-color: black;");
         menu.setSpacing(50);
         menu.setMaxSize(400, 500);
 
@@ -417,7 +462,7 @@ public class Client extends Application {
                     }
                     if (line.equals("Ok")) {
                         menu.getChildren().remove(txt);
-                        clientThread = new ClientThread(root, in, out, stage, stop, turn);
+                        clientThread = new ClientThread(root, in, out, stage);
                         clientThread.start();
                     } else if (line.equals("Lobby does not exist") || line.equals("Lobby is already full")) {
                         txt.setText(line);
@@ -458,7 +503,7 @@ public class Client extends Application {
         root.setBackground(new Background(myBI));
         VBox textContainer = new VBox();
         textContainer.setMaxSize(600, 100);
-        textContainer.setStyle("-fx-background-color: rgba(165, 111, 38, 0.6); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50;");
+        textContainer.setStyle("-fx-background-color: rgba(165, 111, 38, 0.7); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50; -fx-border-color: black;");
         textContainer.setAlignment(Pos.CENTER);
         textContainer.getChildren().add(txt);
         root.getChildren().add(textContainer);

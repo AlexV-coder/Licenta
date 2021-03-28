@@ -6,6 +6,7 @@
 package server;
 
 import java.util.Arrays;
+
 /**
  *
  * @author Alex
@@ -78,7 +79,7 @@ public class Utility {
         bitboards.BA = bitboards.BK | bitboards.BQ | bitboards.BR | bitboards.BN | bitboards.BB | bitboards.BP;
         bitboards.A = bitboards.WA | bitboards.BA;
     }
-    
+
     public static void bitboardsToArray(String[][] board, Bitboards bitboards) {
         long WK = bitboards.WK;
         long BK = bitboards.BK;
@@ -93,14 +94,17 @@ public class Utility {
         long WP = bitboards.WP;
         long BP = bitboards.BP;
         int index;
-        for(int i = 0; i < 8; i++) {
-            for(int j = 0;j < 8; j++) {
-                board[i][j] = " "; 
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                board[i][j] = " ";
             }
         }
 
-        index = Long.numberOfTrailingZeros(WK);
-        board[index / 8][index % 8] = "K";
+        while (WK != 0) {
+            index = Long.numberOfTrailingZeros(WK);
+            board[index / 8][index % 8] = "K";
+            WK = WK & (WK - 1);
+        }
 
         while (WQ != 0) {
             index = Long.numberOfTrailingZeros(WQ);
@@ -128,8 +132,11 @@ public class Utility {
             WP = WP & (WP - 1);
         }
 
-        index = Long.numberOfTrailingZeros(BK);
-        board[index / 8][index % 8] = "k";
+        while (BK != 0) {
+            index = Long.numberOfTrailingZeros(BK);
+            board[index / 8][index % 8] = "k";
+            BK = BK & (BK - 1);
+        }
         while (BQ != 0) {
             index = Long.numberOfTrailingZeros(BQ);
             board[index / 8][index % 8] = "q";
