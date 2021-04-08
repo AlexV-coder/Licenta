@@ -108,12 +108,18 @@ public class ServerThread extends Thread {
             }
         }
         try {
-            if (mode.equals("Regular")) {
-                startMultiplayerGame(in, out);
-            } else if (mode.equals("Fog")) {
-                startMultiplayerGameFog(in, out);
-            } else if (mode.equals("Battle")) {
-                startMultiplayerGameBattle(in, out);
+            switch (mode) {
+                case "Regular":
+                    startMultiplayerGame(in, out);
+                    break;
+                case "Fog":
+                    startMultiplayerGameFog(in, out);
+                    break;
+                case "Battle":
+                    startMultiplayerGameBattle(in, out);
+                    break;
+                default:
+                    break;
             }
         } catch (InterruptedException ex) {
             System.out.println(ex.toString());
@@ -137,19 +143,27 @@ public class ServerThread extends Thread {
                 out.println("Ok");
                 out.flush();
             }
-            for (int i = 0; i < games.size(); i++) {
-                if (games.get(i).id == id) {
-                    games.get(i).player2 = player;
-                    games.get(i).gameOn.set(true);
-                    game = games.get(i);
+            synchronized (games) {
+                for (int i = 0; i < games.size(); i++) {
+                    if (games.get(i).id == id) {
+                        games.get(i).player2 = player;
+                        games.get(i).gameOn.set(true);
+                        game = games.get(i);
+                    }
                 }
             }
-            if (game.mode.equals("Regular")) {
-                startMultiplayerGame(in, out);
-            } else if (game.mode.equals("Fog")) {
-                startMultiplayerGameFog(in, out);
-            } else if (game.mode.equals("Battle")) {
-                startMultiplayerGameBattle(in, out);
+            switch (game.mode) {
+                case "Regular":
+                    startMultiplayerGame(in, out);
+                    break;
+                case "Fog":
+                    startMultiplayerGameFog(in, out);
+                    break;
+                case "Battle":
+                    startMultiplayerGameBattle(in, out);
+                    break;
+                default:
+                    break;
             }
         } catch (InterruptedException ex) {
             System.out.println(ex.toString());
@@ -377,20 +391,15 @@ public class ServerThread extends Thread {
     }
 
     private boolean lobbyExists(int id) {
-        if (games.stream().anyMatch((g) -> (g.id == id))) {
-            return true;
-        }
-        return false;
+        return games.stream().anyMatch((g) -> (g.id == id));
     }
 
     private boolean lobbyIsFull(int id) {
-        if (games.stream().anyMatch((g) -> (g.id == id && g.player2 != null))) {
-            return true;
-        }
-        return false;
+        return games.stream().anyMatch((g) -> (g.id == id && g.player2 != null));
     }
 
     private void createSinglePlayerGame(String line, BufferedReader in, PrintWriter out) {
+        String mode = line.split(" ")[4];
         String diff = line.split(" ")[3];
         String colorChosen = line.split(" ")[2];
         this.game = new Game();
@@ -400,7 +409,11 @@ public class ServerThread extends Thread {
         } else {
             game.player2Color = "black";
         }
+        if (mode.equals("Battle")) {
+            game.resetBoard();
+        }
         game.player1 = player;
+        game.mode = mode;
         game.gameOn.set(true);
         Utility.arrayToBitboards(game.board, game.bitboards);
         int side, depth;
@@ -435,10 +448,32 @@ public class ServerThread extends Thread {
         if ("black".equals(game.player1Color)) {
             out.println("2");
             out.flush();
-            sendBlackBoard(out, game.board, '1');
         } else {
             out.println("1");
             out.flush();
+        }
+        if (game.mode.equals("Battle")) {
+            if (game.player2Color.equals("white")) {
+                setWhiteBoard(pc.generateWhiteBoard());
+            } else {
+                setBlackBoard(pc.generateBlackBoard());
+            }
+            out.println("Battle");
+            out.flush();
+            try {
+                waitSinglePieces(in, out);
+                pc = new PC(game.bitboards, pc.side, pc.maxDepth);
+            } catch (IOException ex) {
+                game.winner = game.player2Color;
+                game.player1SetPieces.set(true);
+                game.gameOn.set(false);
+                return;
+            }
+        }
+
+        if ("black".equals(game.player1Color)) {
+            sendBlackBoard(out, game.board, '1');
+        } else {
             sendWhiteBoard(out, game.board, '1');
         }
 
@@ -478,7 +513,6 @@ public class ServerThread extends Thread {
                     game.gameOn.set(false);
                     break;
                 }
-                //pc.bitboards = new Bitboards(game.bitboards);
                 if (!(game.lastMove.equals("-----"))) {
                     MoveGenerator.makeMove(pc.bitboards, game.lastMove);
                 }
@@ -982,5 +1016,36 @@ public class ServerThread extends Thread {
         out.println("Valid");
         out.flush();
         return true;
+    }
+
+    private void waitSinglePieces(BufferedReader in, PrintWriter out) throws IOException, InterruptedException {
+        boolean legal = false;
+        String line;
+        while (!legal) {
+            line = in.readLine();
+            if (line.equals("Quit")) {
+                if (game.player1Color.equals("white")) {
+                    game.winner = "black";
+                } else {
+                    game.winner = "white";
+                }
+                game.player1SetPieces.set(true);
+                game.gameOn.set(false);
+                return;
+            }
+            if (game.player1Color.equals("white")) {
+                if (isLegalCompositionWhite(line, out)) {
+                    setWhiteBoard(line);
+                    legal = true;
+                    game.player1SetPieces.set(true);
+                }
+            } else if (isLegalCompositionBlack(line, out)) {
+                setBlackBoard(line);
+                legal = true;
+                game.player1SetPieces.set(true);
+            }
+
+        }
+        Utility.arrayToBitboards(game.board, game.bitboards);
     }
 }

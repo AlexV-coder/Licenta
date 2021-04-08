@@ -5,10 +5,13 @@
  */
 package server;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import static server.MoveGenerator.attackerBoardB;
 import static server.MoveGenerator.attackerBoardW;
 import static server.MoveGenerator.generateMovesB;
@@ -21,10 +24,11 @@ import static server.Utility.transpose;
  * @author Alex
  */
 public class PC {
+
     /**
      * @param args the command line arguments
      */
-     double pawnB[] = {
+    double pawnB[] = {
         0, 0, 0, 0, 0, 0, 0, 0,
         5, 10, 10, -20, -20, 10, 10, 5,
         5, -5, -10, 0, 0, -10, -5, 5,
@@ -34,7 +38,7 @@ public class PC {
         50, 50, 50, 50, 50, 50, 50, 50,
         0, 0, 0, 0, 0, 0, 0, 0};
 
-     double[] knightB = {
+    double[] knightB = {
         -50, -40, -30, -30, -30, -30, -40, -50,
         -40, -20, 0, 5, 5, 0, -20, -40,
         -30, 5, 10, 15, 15, 10, 5, -30,
@@ -44,7 +48,7 @@ public class PC {
         -40, -20, 0, 0, 0, 0, -20, -40,
         -50, -40, -30, -30, -30, -30, -40, -50};
 
-     double[] bishopB = {
+    double[] bishopB = {
         -20, -10, -10, -10, -10, -10, -10, -20,
         -10, 5, 0, 0, 0, 0, 5, -10,
         -10, 10, 10, 10, 10, 10, 10, -10,
@@ -54,7 +58,7 @@ public class PC {
         -10, 0, 0, 0, 0, 0, 0, -10,
         -20, -10, -10, -10, -10, -10, -10, -20};
 
-     double[] rookB = {
+    double[] rookB = {
         0, 0, 0, 5, 5, 0, 0, 0,
         -5, 0, 0, 0, 0, 0, 0, -5,
         -5, 0, 0, 0, 0, 0, 0, -5,
@@ -64,7 +68,7 @@ public class PC {
         5, 10, 10, 10, 10, 10, 10, 5,
         0, 0, 0, 0, 0, 0, 0, 0};
 
-     double[] queenB = {
+    double[] queenB = {
         -20, -10, -10, -5, -5, -10, -10, -20,
         -10, 0, 0, 0, 0, 0, 0, -10,
         -10, 5, 5, 5, 5, 5, 0, -10,
@@ -74,7 +78,7 @@ public class PC {
         -10, 0, 0, 0, 0, 0, 0, -10,
         -20, -10, -10, -5, -5, -10, -10, -20};
 
-     double[] kingB = {
+    double[] kingB = {
         20, 30, 10, 0, 0, 10, 30, 20,
         20, 20, 0, 0, 0, 0, 20, 20,
         -10, -20, -20, -20, -20, -20, -20, -10,
@@ -84,13 +88,13 @@ public class PC {
         -30, -40, -40, -50, -50, -40, -40, -30,
         -30, -40, -40, -50, -50, -40, -40, -30};
 
-     double pawnW[] = new double[64];
-     double bishopW[] = new double[64];
-     double knightW[] = new double[64];
-     double rookW[] = new double[64];
-     double queenW[] = new double[64];
-     double kingW[] = new double[64];
-     String chessBoard[][] = {
+    double pawnW[] = new double[64];
+    double bishopW[] = new double[64];
+    double knightW[] = new double[64];
+    double rookW[] = new double[64];
+    double queenW[] = new double[64];
+    double kingW[] = new double[64];
+    String chessBoard[][] = {
         {"r", "n", "b", "q", "k", "b", "n", "r"},
         {"p", "p", "p", "p", "p", "p", "p", "p"},
         {" ", " ", " ", " ", " ", " ", " ", " "},
@@ -100,16 +104,16 @@ public class PC {
         {"P", "P", "P", "P", "P", "P", "P", "P"},
         {"R", "N", "B", "Q", "K", "B", "N", "R"}};
 
-     int nps = 0;
-     int R = 2;
-     int maxDepth = 6;
-     int side = 1;
-     Bitboards bitboards;
-     Map<Long, TableEntry> transpositionTable = new HashMap<>();
-     String[][] killerMoves = new String[9][2];
-     String compMove;
+    int nps = 0;
+    int R = 2;
+    int maxDepth = 6;
+    int side = 1;
+    Bitboards bitboards;
+    Map<Long, TableEntry> transpositionTable = new HashMap<>();
+    String[][] killerMoves = new String[9][2];
+    String compMove;
 
-    PC (Bitboards bitboards, int s, int depth) {
+    PC(Bitboards bitboards, int s, int depth) {
         this.bitboards = new Bitboards(bitboards);
         maxDepth = depth;
         side = s;
@@ -127,6 +131,7 @@ public class PC {
             }
         }
     }
+
     public String move() {
         killerMoves = new String[9][2];
         transpositionTable = new HashMap<>();
@@ -137,7 +142,7 @@ public class PC {
         return compMove;
     }
 
-    private  int calculateScore(Bitboards bitboards) {
+    private int calculateScore(Bitboards bitboards) {
         int whiteScore = 0;
         int blackScore = 0;
         long WK = bitboards.WK;
@@ -214,7 +219,7 @@ public class PC {
         return blackScore - whiteScore;
     }
 
-    private  void hashBoard(Bitboards bitboards) {
+    private void hashBoard(Bitboards bitboards) {
         long WK = bitboards.WK;
         long BK = bitboards.BK;
         long WQ = bitboards.WQ;
@@ -291,7 +296,7 @@ public class PC {
         bitboards.hashKey = hashKey;
     }
 
-    private  double negaMax(Bitboards bitboards, int depth, double alpha, double beta, int side, boolean inNullMove) {
+    private double negaMax(Bitboards bitboards, int depth, double alpha, double beta, int side, boolean inNullMove) {
         double alphaOrig = alpha;
         String moveFromTT = "";
         TableEntry position = transpositionTable.get(bitboards.hashKey);
@@ -406,7 +411,7 @@ public class PC {
         return score;
     }
 
-    private  double quiesce(Bitboards bitboards, double alpha, double beta, int side) {
+    private double quiesce(Bitboards bitboards, double alpha, double beta, int side) {
 
         int stand_pat = calculateScore(bitboards) * side;
         if (stand_pat >= beta) {
@@ -461,4 +466,292 @@ public class PC {
         }
         return alpha;
     }
+
+    String generateWhiteBoard() {
+        String customBoard[][];
+        String returnBoard = "";
+        String board[][];
+        int bestScore = Integer.MAX_VALUE;
+        for (int in = 0; in < 100; in++) {
+            List<Integer> freeSpaces = new ArrayList<>();
+            List<Integer> freeSpacesSecondRank = new ArrayList<>();
+            Random rand = new Random();
+            for (int i = 0; i < 8; i++) {
+                freeSpacesSecondRank.add(i);
+            }
+            for (int i = 0; i < 16; i++) {
+                freeSpaces.add(i);
+            }
+            customBoard = new String[][]{
+                {" ", " ", " ", " ", " ", " ", " ", " "},
+                {" ", " ", " ", " ", " ", " ", " ", " "}};
+            board = newBoardWhite();
+            int points = 39;
+            int randomNum1;
+            int randomNum2;
+            randomNum1 = ThreadLocalRandom.current().nextInt(0, 8);
+            customBoard[1][randomNum1] = "K";
+            RemoveEl(freeSpaces, randomNum1 + 8);
+            RemoveEl(freeSpaces, randomNum1);
+            RemoveEl(freeSpacesSecondRank, randomNum1);
+            randomNum2 = ThreadLocalRandom.current().nextInt(0, 5);
+            switch (randomNum2) {
+                case 0:
+                    customBoard[0][randomNum1] = "P";
+                    points -= 1;
+                    break;
+                case 1:
+                    customBoard[0][randomNum1] = "B";
+                    points -= 3;
+                    break;
+                case 2:
+                    customBoard[0][randomNum1] = "N";
+                    points -= 3;
+                    break;
+                case 3:
+                    customBoard[0][randomNum1] = "R";
+                    points -= 5;
+                    break;
+                case 4:
+                    customBoard[0][randomNum1] = "Q";
+                    points -= 9;
+                    break;
+                default:
+                    break;
+            }
+
+            while (points != 0 && !freeSpaces.isEmpty()) {
+                if (points < 3 && freeSpacesSecondRank.isEmpty()) {
+                    break;
+                }
+                int max;
+                if (points < 3) {
+                    max = 1;
+                } else if (points < 5) {
+                    max = 3;
+                } else if (points < 9) {
+                    max = 4;
+                } else {
+                    max = 5;
+                }
+                randomNum2 = ThreadLocalRandom.current().nextInt(0, max);
+                if (randomNum2 == 0) {
+                    if (!freeSpacesSecondRank.isEmpty()) {
+                        randomNum1 = freeSpacesSecondRank.get(rand.nextInt(freeSpacesSecondRank.size()));
+                        customBoard[0][randomNum1] = "P";
+                        RemoveEl(freeSpacesSecondRank, randomNum1);
+                        RemoveEl(freeSpaces, randomNum1);
+                        points -= 1;
+                    }
+                } else {
+                    randomNum1 = freeSpaces.get(rand.nextInt(freeSpaces.size()));
+                    RemoveEl(freeSpaces, randomNum1);
+                    if (randomNum1 < 8) {
+                        RemoveEl(freeSpacesSecondRank, randomNum1);
+                    }
+                    switch (randomNum2) {
+                        case 1:
+                            customBoard[randomNum1 / 8][randomNum1 % 8] = "B";
+                            points -= 3;
+                            break;
+                        case 2:
+                            customBoard[randomNum1 / 8][randomNum1 % 8] = "N";
+                            points -= 3;
+                            break;
+                        case 3:
+                            customBoard[randomNum1 / 8][randomNum1 % 8] = "R";
+                            points -= 5;
+                            break;
+                        case 4:
+                            customBoard[randomNum1 / 8][randomNum1 % 8] = "Q";
+                            points -= 9;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+            for (int i = 6; i < 8; i++) {
+                for (int j = 0; j < 8; j++) {
+                    board[i][j] = customBoard[i - 6][j];
+                }
+            }
+            Bitboards bitbds = new Bitboards();
+            Utility.arrayToBitboards(board, bitbds);
+            int score = calculateScore(bitbds);
+            if (score < bestScore) {
+                bestScore = score;
+                returnBoard = "";
+                for (int i = 0; i < 2; i++) {
+                    for (int j = 0; j < 8; j++) {
+                        returnBoard += customBoard[i][j];
+                    }
+                }
+            }
+        }
+        return returnBoard;
+    }
+
+    String generateBlackBoard() {
+        String customBoard[][];
+        String returnBoard = "";
+        String board[][];
+        int bestScore = Integer.MIN_VALUE;
+        for (int in = 0; in < 100; in++) {
+            List<Integer> freeSpaces = new ArrayList<>();
+            List<Integer> freeSpacesSecondRank = new ArrayList<>();
+            Random rand = new Random();
+            for (int i = 0; i < 8; i++) {
+                freeSpacesSecondRank.add(i);
+            }
+            for (int i = 0; i < 16; i++) {
+                freeSpaces.add(i);
+            }
+            customBoard = new String[][]{
+                {" ", " ", " ", " ", " ", " ", " ", " "},
+                {" ", " ", " ", " ", " ", " ", " ", " "}};
+            board = newBoardBlack();
+            int points = 39;
+            int randomNum1;
+            int randomNum2;
+            randomNum1 = ThreadLocalRandom.current().nextInt(0, 8);
+            customBoard[1][randomNum1] = "k";
+            RemoveEl(freeSpaces, randomNum1 + 8);
+            RemoveEl(freeSpaces, randomNum1);
+            RemoveEl(freeSpacesSecondRank, randomNum1);
+            randomNum2 = ThreadLocalRandom.current().nextInt(0, 5);
+            switch (randomNum2) {
+                case 0:
+                    customBoard[0][randomNum1] = "p";
+                    points -= 1;
+                    break;
+                case 1:
+                    customBoard[0][randomNum1] = "b";
+                    points -= 3;
+                    break;
+                case 2:
+                    customBoard[0][randomNum1] = "n";
+                    points -= 3;
+                    break;
+                case 3:
+                    customBoard[0][randomNum1] = "r";
+                    points -= 5;
+                    break;
+                case 4:
+                    customBoard[0][randomNum1] = "q";
+                    points -= 9;
+                    break;
+                default:
+                    break;
+            }
+
+            while (points != 0 && !freeSpaces.isEmpty()) {
+                if (points < 3 && freeSpacesSecondRank.isEmpty()) {
+                    break;
+                }
+                int max;
+                if (points < 3) {
+                    max = 1;
+                } else if (points < 5) {
+                    max = 3;
+                } else if (points < 9) {
+                    max = 4;
+                } else {
+                    max = 5;
+                }
+                randomNum2 = ThreadLocalRandom.current().nextInt(0, max);
+                if (randomNum2 == 0) {
+                    if (!freeSpacesSecondRank.isEmpty()) {
+                        randomNum1 = freeSpacesSecondRank.get(rand.nextInt(freeSpacesSecondRank.size()));
+                        customBoard[0][randomNum1] = "p";
+                        RemoveEl(freeSpacesSecondRank, randomNum1);
+                        RemoveEl(freeSpaces, randomNum1);
+                        points -= 1;
+                    }
+                } else {
+                    randomNum1 = freeSpaces.get(rand.nextInt(freeSpaces.size()));
+                    RemoveEl(freeSpaces, randomNum1);
+                    if (randomNum1 < 8) {
+                        RemoveEl(freeSpacesSecondRank, randomNum1);
+                    }
+                    switch (randomNum2) {
+                        case 1:
+                            customBoard[randomNum1 / 8][randomNum1 % 8] = "b";
+                            points -= 3;
+                            break;
+                        case 2:
+                            customBoard[randomNum1 / 8][randomNum1 % 8] = "n";
+                            points -= 3;
+                            break;
+                        case 3:
+                            customBoard[randomNum1 / 8][randomNum1 % 8] = "r";
+                            points -= 5;
+                            break;
+                        case 4:
+                            customBoard[randomNum1 / 8][randomNum1 % 8] = "q";
+                            points -= 9;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+            for (int i = 0; i < 8; i++) {
+                board[0][i] = customBoard[1][7 - i];
+            }
+            for (int i = 0; i < 8; i++) {
+                board[1][i] = customBoard[0][7 - i];
+            }
+            Bitboards bitbds = new Bitboards();
+            Utility.arrayToBitboards(board, bitbds);
+            int score = calculateScore(bitbds);
+            if (score > bestScore) {
+                bestScore = score;
+                returnBoard = "";
+                for (int i = 0; i < 2; i++) {
+                    for (int j = 0; j < 8; j++) {
+                        returnBoard += customBoard[i][j];
+                    }
+                }
+            }
+        }
+        return returnBoard;
+    }
+
+    private void RemoveEl(List<Integer> freeSpaces, int num) {
+        int index = 0;
+        for (int i = 0; i < freeSpaces.size(); i++) {
+            if (freeSpaces.get(i) == num) {
+                index = i;
+            }
+        }
+        freeSpaces.remove(index);
+    }
+
+    private String[][] newBoardWhite() {
+        String[][] board = new String[][]{
+            {"r", "n", "b", "q", "k", "b", "n", "r"},
+            {"p", "p", "p", "p", "p", "p", "p", "p"},
+            {" ", " ", " ", " ", " ", " ", " ", " "},
+            {" ", " ", " ", " ", " ", " ", " ", " "},
+            {" ", " ", " ", " ", " ", " ", " ", " "},
+            {" ", " ", " ", " ", " ", " ", " ", " "},
+            {" ", " ", " ", " ", " ", " ", " ", " "},
+            {" ", " ", " ", " ", " ", " ", " ", " "}};
+        return board;
+    }
+
+    private String[][] newBoardBlack() {
+        String[][] board = new String[][]{
+            {" ", " ", " ", " ", " ", " ", " ", " "},
+            {" ", " ", " ", " ", " ", " ", " ", " "},
+            {" ", " ", " ", " ", " ", " ", " ", " "},
+            {" ", " ", " ", " ", " ", " ", " ", " "},
+            {" ", " ", " ", " ", " ", " ", " ", " "},
+            {" ", " ", " ", " ", " ", " ", " ", " "},
+            {"P", "P", "P", "P", "P", "P", "P", "P"},
+            {"R", "N", "B", "Q", "K", "B", "N", "R"}};
+        return board;
+    }
+
 }

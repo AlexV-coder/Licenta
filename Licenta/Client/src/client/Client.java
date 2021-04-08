@@ -50,7 +50,9 @@ public class Client extends Application {
     ClientThread clientThread;
     String colorChosen = "white";
     int modeChosen = 0;
+    int modeChosenSingle = 0;
     String[] modes = {"Regular", "Fog of War", "Battle Plan"};
+    String[] modesSingle = {"Regular", "Battle Plan"};
 
     public Client() {
         try {
@@ -243,7 +245,7 @@ public class Client extends Application {
         VBox menu = new VBox();
         menu.setStyle("-fx-background-color: rgba(165, 111, 38, 0.7); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50; -fx-border-color: black;");
         menu.setSpacing(50);
-        menu.setMaxSize(400, 450);
+        menu.setMaxSize(400, 500);
 
         Button back = new Button();
         back.setOnMouseClicked(e -> {
@@ -255,7 +257,7 @@ public class Client extends Application {
 
         Button play = new Button();
         play.setOnMouseClicked(e -> {
-            out.println("Single player " + colorChosen + " " + difficulty);
+            out.println("Single player " + colorChosen + " " + difficulty + " " + modesSingle[modeChosenSingle].split(" ")[0]);
             out.flush();
             clientThread = new ClientThread(root, in, out, stage);
             clientThread.start();
@@ -289,7 +291,47 @@ public class Client extends Application {
             }
         });
 
-        menu.getChildren().addAll(colorChooser, play, back);
+        HBox modeChooser = new HBox();
+        modeChooser.setAlignment(Pos.CENTER);
+        modeChooser.setSpacing(50);
+        Text mode = new Text();
+        mode.setText(modesSingle[modeChosenSingle]);
+        mode.setFont(Font.font("Verdana", 24));
+        mode.setFill(Color.BLACK);
+
+        Polygon leftTriangle = new Polygon();
+        leftTriangle.setStroke(Color.WHITE);
+        leftTriangle.setFill(Color.rgb(125, 96, 32));
+        leftTriangle.getPoints().addAll(new Double[]{
+            0.0, 15.0,
+            30.0, 0.0,
+            30.0, 30.0});
+        leftTriangle.setOnMouseClicked(e -> {
+            modeChosenSingle--;
+            if (modeChosenSingle < 0) {
+                modeChosenSingle = modesSingle.length - 1;
+            }
+            mode.setText(modesSingle[modeChosenSingle]);
+        });
+
+        Polygon rightTriangle = new Polygon();
+        rightTriangle.setStroke(Color.WHITE);
+        rightTriangle.setFill(Color.rgb(125, 96, 32));
+        rightTriangle.getPoints().addAll(new Double[]{
+            160.0, 115.0,
+            130.0, 100.0,
+            130.0, 130.0});
+        rightTriangle.setOnMouseClicked(e -> {
+            modeChosenSingle++;
+            if (modeChosenSingle >= modesSingle.length) {
+                modeChosenSingle = 0;
+            }
+            mode.setText(modesSingle[modeChosenSingle]);
+        });
+
+        modeChooser.getChildren().addAll(leftTriangle, mode, rightTriangle);
+
+        menu.getChildren().addAll(colorChooser, modeChooser, play, back);
         menu.setAlignment(Pos.CENTER);
         root.getChildren().add(menu);
         return root;
@@ -457,9 +499,7 @@ public class Client extends Application {
                 try {
                     out.println("Join lobby " + id);
                     out.flush();
-                    while ((line = in.readLine()) == null) {
-
-                    }
+                    line = in.readLine();
                     if (line.equals("Ok")) {
                         menu.getChildren().remove(txt);
                         clientThread = new ClientThread(root, in, out, stage);
