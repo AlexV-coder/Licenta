@@ -135,10 +135,12 @@ public class PC {
     public String move() {
         killerMoves = new String[9][2];
         transpositionTable = new HashMap<>();
+        nps = 0;
         //iterative deepening
-        for (int i = 2; i <= maxDepth; i++) {
-            negaMax(bitboards, i, -999999, 999999, side, false);
+        for (int i = 2; i <= maxDepth; i = i + 2) {
+            negaMax(bitboards, i, Integer.MIN_VALUE, Integer.MAX_VALUE, side, false);
         }
+        makeMove(bitboards, compMove);
         return compMove;
     }
 
@@ -158,7 +160,7 @@ public class PC {
         long WP = bitboards.WP;
         long BP = bitboards.BP;
         int index;
-
+        
         index = Long.numberOfTrailingZeros(WK);
         whiteScore += 2000 + kingW[index];
 
@@ -321,7 +323,6 @@ public class PC {
 
         if (depth == 0) {
             return side * calculateScore(bitboards);
-            //return quiesce(bitboards, alpha, beta, side);
         }
 
         String moves;
@@ -380,7 +381,7 @@ public class PC {
             moves = moves.replace(moveFromTT, "");
             moves = moveFromTT + moves;
         }
-        double score = -9999999;
+        double score = Integer.MIN_VALUE;
         for (int i = 0; i < moves.length(); i += 5) {
             String mv = moves.substring(i, i + 5);
             Bitboards child = new Bitboards(bitboards);
@@ -392,8 +393,10 @@ public class PC {
             }
             alpha = Math.max(alpha, score);
             if (alpha >= beta) {
-                killerMoves[depth][1] = killerMoves[depth][0];
-                killerMoves[depth][0] = bestMove;
+                if ((bitboards.A & 1L << (Character.getNumericValue(bestMove.charAt(2)) * 8 + Character.getNumericValue(bestMove.charAt(3)))) == 0) {
+                    killerMoves[depth][1] = killerMoves[depth][0];
+                    killerMoves[depth][0] = bestMove;
+                }
                 break;
             }
         }
@@ -406,65 +409,8 @@ public class PC {
         transpositionTable.put(bitboards.hashKey, new TableEntry(bitboards.turn, depth, bestMove, (int) score, bitboards.enPassant, bitboards.castle, flag));
         if (depth == maxDepth) {
             compMove = bestMove;
-            makeMove(bitboards, bestMove);
         }
         return score;
-    }
-
-    private double quiesce(Bitboards bitboards, double alpha, double beta, int side) {
-
-        int stand_pat = calculateScore(bitboards) * side;
-        if (stand_pat >= beta) {
-            return beta;
-        }
-        if (alpha < stand_pat) {
-            alpha = stand_pat;
-        }
-
-        String moves;
-        if (bitboards.turn) {
-            moves = generateMovesW(bitboards);
-        } else {
-            moves = generateMovesB(bitboards);
-        }
-
-        if (moves.length() == 0) {
-            if (bitboards.turn) {
-                if (attackerBoardW(bitboards, bitboards.WK) == 0) {
-                    return 0;
-                } else {
-                    return -300000;
-                }
-            } else {
-                if (attackerBoardB(bitboards, bitboards.BK) == 0) {
-                    return 0;
-                } else {
-                    return 300000;
-                }
-            }
-        }
-
-        String captures = "";
-        for (int i = 0; i < moves.length(); i += 5) {
-            String move = moves.substring(i, i + 5);
-            if ((bitboards.A & 1L << (Character.getNumericValue(move.charAt(2)) * 8 + Character.getNumericValue(move.charAt(3)))) != 0) {
-                captures += moves.substring(i, i + 5);
-            }
-        }
-        double score;
-        for (int i = 0; i < captures.length(); i += 5) {
-            Bitboards copy = new Bitboards(bitboards);
-            makeMove(copy, captures.substring(i, i + 5));
-            score = -quiesce(copy, -beta, -alpha, -side);
-
-            if (score >= beta) {
-                return beta;
-            }
-            if (score > alpha) {
-                alpha = score;
-            }
-        }
-        return alpha;
     }
 
     String generateWhiteBoard() {
@@ -472,7 +418,7 @@ public class PC {
         String returnBoard = "";
         String board[][];
         int bestScore = Integer.MAX_VALUE;
-        for (int in = 0; in < 100; in++) {
+        for (int in = 0; in < 50; in++) {
             List<Integer> freeSpaces = new ArrayList<>();
             List<Integer> freeSpacesSecondRank = new ArrayList<>();
             Random rand = new Random();
@@ -572,9 +518,7 @@ public class PC {
                 }
             }
             for (int i = 6; i < 8; i++) {
-                for (int j = 0; j < 8; j++) {
-                    board[i][j] = customBoard[i - 6][j];
-                }
+                System.arraycopy(customBoard[i - 6], 0, board[i], 0, 8);
             }
             Bitboards bitbds = new Bitboards();
             Utility.arrayToBitboards(board, bitbds);
@@ -597,7 +541,7 @@ public class PC {
         String returnBoard = "";
         String board[][];
         int bestScore = Integer.MIN_VALUE;
-        for (int in = 0; in < 100; in++) {
+        for (int in = 0; in < 50; in++) {
             List<Integer> freeSpaces = new ArrayList<>();
             List<Integer> freeSpacesSecondRank = new ArrayList<>();
             Random rand = new Random();

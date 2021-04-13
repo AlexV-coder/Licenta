@@ -296,7 +296,7 @@ public class Client extends Application {
         modeChooser.setSpacing(50);
         Text mode = new Text();
         mode.setText(modesSingle[modeChosenSingle]);
-        mode.setFont(Font.font("Verdana", 24));
+        mode.setFont(Font.font("Verdana", FontPosture.ITALIC, 24));
         mode.setFill(Color.BLACK);
 
         Polygon leftTriangle = new Polygon();
@@ -423,7 +423,7 @@ public class Client extends Application {
         modeChooser.setSpacing(50);
         Text mode = new Text();
         mode.setText("Regular");
-        mode.setFont(Font.font("Verdana", 24));
+        mode.setFont(Font.font("Verdana", FontPosture.ITALIC, 24));
         mode.setFill(Color.BLACK);
 
         Polygon leftTriangle = new Polygon();

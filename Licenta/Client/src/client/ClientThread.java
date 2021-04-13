@@ -9,11 +9,14 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
@@ -57,6 +60,7 @@ public class ClientThread extends Thread {
     String lastMove;
     int points;
     String customBoard[][];
+    List<String> history;
 
     ClientThread(StackPane sp, BufferedReader in, PrintWriter out, Stage stage) {
         this.in = in;
@@ -69,6 +73,8 @@ public class ClientThread extends Thread {
             {" ", " ", " ", " ", " ", " ", " ", " "},
             {" ", " ", " ", " ", " ", " ", " ", " "}};
         pieceSelected = ' ';
+        stop = false;
+        history = new ArrayList<>();
     }
 
     @Override
@@ -132,7 +138,9 @@ public class ClientThread extends Thread {
                     stage.getScene().setRoot(getPostMatchMenu(stage, result));
                     break;
                 }
+
                 lastMove = line.substring(line.length() - 5, line.length());
+                addToHistory(lastMove);
                 line = line.substring(0, line.length() - 5);
                 turn = line.charAt(0);
                 line = line.substring(1, line.length());
@@ -143,6 +151,7 @@ public class ClientThread extends Thread {
                 }
                 drawBoard(gc);
                 drawPieces(gc);
+                showHistory();
 
             }
 
@@ -164,17 +173,30 @@ public class ClientThread extends Thread {
         container.setSpacing(25);
         container.setAlignment(Pos.CENTER);
 
+        HBox boardAndHistory = new HBox();
+
         StackPane boardTexture = new StackPane();
-        boardTexture.setPrefSize(850, 850);
-        boardTexture.setMaxSize(850, 850);
-        boardTexture.setAlignment(Pos.CENTER);
+        boardTexture.setPrefSize(875, 875);
+        boardTexture.setMaxSize(875, 875);
         file = new File("texture.jpg");
-        BackgroundImage myBI2 = new BackgroundImage(new Image(file.toURI().toString(), 850, 850, false, true),
+        BackgroundImage myBI2 = new BackgroundImage(new Image(file.toURI().toString(), 875, 875, false, true),
                 BackgroundRepeat.REPEAT, BackgroundRepeat.NO_REPEAT, BackgroundPosition.DEFAULT,
                 BackgroundSize.DEFAULT);
         boardTexture.setBackground(new Background(myBI2));
         Canvas canvas = new Canvas(800, 800);
         boardTexture.getChildren().add(canvas);
+
+        StackPane showHistory = new StackPane();
+        showHistory.setPrefSize(200, 800);
+        showHistory.setStyle("-fx-background-color: rgba(165, 111, 38, 0.7); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50; -fx-border-color: black;");
+        Text txt = new Text();
+        txt.setFont(Font.font("Verdana", FontPosture.ITALIC, 17));
+        showHistory.setAlignment(Pos.TOP_CENTER);
+        showHistory.getChildren().add(txt);
+
+        boardAndHistory.getChildren().addAll(showHistory, boardTexture);
+        boardAndHistory.setSpacing(50);
+        boardAndHistory.setAlignment(Pos.CENTER);
 
         HBox buttons = new HBox();
         buttons.setSpacing(50);
@@ -196,7 +218,7 @@ public class ClientThread extends Thread {
         resign.setGraphic(imageView);
 
         buttons.getChildren().add(resign);
-        container.getChildren().add(boardTexture);
+        container.getChildren().add(boardAndHistory);
         currentStackPane.getChildren().add(container);
         gc = canvas.getGraphicsContext2D();
         drawBoard(gc);
@@ -367,11 +389,13 @@ public class ClientThread extends Thread {
             back.setPadding(new Insets(10, 10, 10, 10));
             back.setStyle("-fx-base: rgba(145, 111, 38, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt;");
             currentStackPane.getChildren().stream().filter((n) -> (n instanceof VBox)).forEachOrdered((n) -> {
-                ((VBox) n).getChildren().stream().filter((m) -> (m instanceof HBox)).forEachOrdered((m) -> {
-                    Platform.runLater(() -> {
-                        ((VBox) n).getChildren().add(textContainer);
-                        ((HBox) m).getChildren().add(back);
-                    });
+                ((VBox) n).getChildren().stream().filter((m) -> (m instanceof HBox)).forEachOrdered((Node m) -> {
+                    if (((HBox) m).getChildren().size() == 1) {
+                        Platform.runLater(() -> {
+                            ((VBox) n).getChildren().add(textContainer);
+                            ((HBox) m).getChildren().add(back);
+                        });
+                    }
                 });
             });
         } catch (Exception ex) {
@@ -394,11 +418,11 @@ public class ClientThread extends Thread {
         container.setAlignment(Pos.CENTER);
 
         StackPane boardTexture = new StackPane();
-        boardTexture.setPrefSize(850, 850);
-        boardTexture.setMaxSize(850, 850);
+        boardTexture.setPrefSize(875, 875);
+        boardTexture.setMaxSize(875, 875);
         boardTexture.setAlignment(Pos.CENTER);
         file = new File("texture.jpg");
-        BackgroundImage myBI2 = new BackgroundImage(new Image(file.toURI().toString(), 850, 850, false, true),
+        BackgroundImage myBI2 = new BackgroundImage(new Image(file.toURI().toString(), 875, 875, false, true),
                 BackgroundRepeat.REPEAT, BackgroundRepeat.NO_REPEAT, BackgroundPosition.DEFAULT,
                 BackgroundSize.DEFAULT);
         boardTexture.setBackground(new Background(myBI2));
@@ -473,16 +497,24 @@ public class ClientThread extends Thread {
             if (selectedSquare != null) {
                 int i = selectedSquare.charAt(0) - 48;
                 int j = selectedSquare.charAt(1) - 48;
-                if (customBoard[i][j].toLowerCase().equals("q")) {
-                    points += 9;
-                } else if (customBoard[i][j].toLowerCase().equals("r")) {
-                    points += 5;
-                } else if (customBoard[i][j].toLowerCase().equals("b")) {
-                    points += 3;
-                } else if (customBoard[i][j].toLowerCase().equals("n")) {
-                    points += 3;
-                } else if (customBoard[i][j].toLowerCase().equals("p")) {
-                    points += 1;
+                switch (customBoard[i][j].toLowerCase()) {
+                    case "q":
+                        points += 9;
+                        break;
+                    case "r":
+                        points += 5;
+                        break;
+                    case "b":
+                        points += 3;
+                        break;
+                    case "n":
+                        points += 3;
+                        break;
+                    case "p":
+                        points += 1;
+                        break;
+                    default:
+                        break;
                 }
                 customBoard[i][j] = " ";
                 showPoints();
@@ -511,8 +543,8 @@ public class ClientThread extends Thread {
         textContainer.setAlignment(Pos.CENTER);
         Text txt1 = new Text("Points");
         Text txt2 = new Text(String.valueOf(points));
-        txt1.setFont(Font.font("Verdana", 24));
-        txt2.setFont(Font.font("Verdana", 24));
+        txt1.setFont(Font.font("Verdana", FontPosture.ITALIC, 24));
+        txt2.setFont(Font.font("Verdana", FontPosture.ITALIC, 24));
         textContainer.getChildren().addAll(txt1, txt2);
         pieces.getChildren().add(textContainer);
         if (playerNr == '1') {
@@ -537,7 +569,7 @@ public class ClientThread extends Thread {
         piece.setAlignment(Pos.CENTER);
         Text txt = new Text(pts);
         txt.setTextAlignment(TextAlignment.CENTER);
-        txt.setFont(Font.font("Verdana", 24));
+        txt.setFont(Font.font("Verdana", FontPosture.ITALIC, 24));
         HBox pieceImage = new HBox();
         pieceImage.getChildren().add(new ImageView(images.get(p)));
         pieceImage.setOnMouseClicked(e -> {
@@ -579,6 +611,31 @@ public class ClientThread extends Thread {
                 }
             }
         }
+    }
+
+    private void showHistory() {
+        currentStackPane.getChildren().stream().filter((n) -> (n instanceof VBox)).forEachOrdered((n) -> {
+            ((VBox) n).getChildren().stream().filter((m) -> (m instanceof HBox)).forEachOrdered((Node m) -> {
+                if (((HBox) m).getChildren().size() == 2) {
+                    ((HBox) m).getChildren().stream().filter((k) -> (k instanceof StackPane)).forEachOrdered((Node k) -> {
+                        ((StackPane) k).getChildren().stream().filter((t) -> (t instanceof Text)).forEachOrdered((Node t) -> {
+                            Platform.runLater(() -> {
+                                String txtToShow = "\n";
+                                for (int i = 0; i < history.size(); i++) {
+                                    String s = history.get(i);
+                                    if (s.length() == 10) {
+                                        txtToShow += (i + 1) + ". " + s.substring(0, 5) + " - " + s.substring(5, 10) + "\n\n";
+                                    } else {
+                                        txtToShow += (i + 1) + ". " + s.substring(0, 5);
+                                    }
+                                }
+                                ((Text) t).setText(txtToShow);
+                            });
+                        });
+                    });
+                }
+            });
+        });
     }
 
     private void showText(String line) {
@@ -634,5 +691,53 @@ public class ClientThread extends Thread {
                 });
             });
         });
+    }
+
+    static String moveToNotation(String move) {
+        String moveString = "";
+        moveString += "" + (char) (move.charAt(1) + 49);
+        moveString += "" + ('8' - move.charAt(0));
+        moveString += "" + (char) (move.charAt(3) + 49);
+        moveString += "" + ('8' - move.charAt(2));
+        moveString += move.charAt(4);
+        return moveString;
+    }
+
+    private String convertToOtherSide(String move) {
+        String convertedMove;
+        int x0 = move.charAt(0) - 48;
+        int y0 = move.charAt(1) - 48;
+        int x1 = move.charAt(2) - 48;
+        int y1 = move.charAt(3) - 48;
+        x0 = 7 - x0;
+        y0 = 7 - y0;
+        x1 = 7 - x1;
+        y1 = 7 - y1;
+        convertedMove = String.valueOf(x0) + String.valueOf(y0) + String.valueOf(x1) + String.valueOf(y1) + move.charAt(4);
+        return convertedMove;
+    }
+
+    private void addToHistory(String lm) {
+        if (!"-----".equals(lm)) {
+            if (playerNr == '1') {
+                if (!history.isEmpty() && history.get(history.size() - 1).length() == 5) {
+                    history.set(history.size() - 1, history.get(history.size() - 1) + moveToNotation(lm));
+                } else {
+                    history.add(moveToNotation(lm));
+                }
+            } else {
+                if (!history.isEmpty() && history.get(history.size() - 1).length() == 5) {
+                    history.set(history.size() - 1, history.get(history.size() - 1) + moveToNotation(convertToOtherSide(lm)));
+                } else {
+                    history.add(moveToNotation(convertToOtherSide(lm)));
+                }
+            }
+        } else if(!history.isEmpty() || playerNr == '2'){
+            if (!history.isEmpty() && history.get(history.size() - 1).length() == 5) {
+                history.set(history.size() - 1, history.get(history.size() - 1) + " ??? ");
+            } else {
+                history.add(" ??? ");
+            }
+        }
     }
 }

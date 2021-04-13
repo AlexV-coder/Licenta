@@ -50,11 +50,6 @@ public class Game {
             {"R", "N", "B", "Q", "K", "B", "N", "R"}};
     }
 
-    @Override
-    public String toString() {
-        return "Game{" + "player1=" + player1 + ", player2=" + player2 + ", id=" + id + '}';
-    }
-
     void resetBoard() {
         board = new String[8][8];
         for (int i = 0; i < 8; i++) {

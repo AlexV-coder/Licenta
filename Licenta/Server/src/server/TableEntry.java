@@ -21,6 +21,7 @@ public class TableEntry {
     public boolean[] castle = {true, true, true, true};
     public int pruneType;
     public int age = 0;
+    Bitboards bitboards;
 
     TableEntry(boolean t, int d, String b, int s, String enP, boolean[] cstl, int p) {
         turn = t;
