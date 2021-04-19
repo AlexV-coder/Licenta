@@ -13,11 +13,15 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -45,14 +49,18 @@ public class Client extends Application {
     Socket socket;
     PrintWriter out;
     BufferedReader in;
-    int id;
-    String difficulty = "M";
     ClientThread clientThread;
     String colorChosen = "white";
+    String games = "";
+
+    int id;
     int modeChosen = 0;
     int modeChosenSingle = 0;
-    String[] modes = {"Regular", "Fog of War", "Battle Plan"};
-    String[] modesSingle = {"Regular", "Battle Plan"};
+    int diffChosen = 0;
+
+    String[] modes = {"Regular", "Fog of War", "Battle Plan", "King of The Hill"};
+    String[] diffs = {"Easy", "Medium", "Hard"};
+    String[] modesSingle = {"Regular", "Battle Plan", "King of The Hill"};
 
     public Client() {
         try {
@@ -99,32 +107,32 @@ public class Client extends Application {
         root.setBackground(new Background(myBI));
         Button singlePlayer = new Button();
         singlePlayer.setOnMouseClicked(e -> {
-            stage.getScene().setRoot(getSingleMenu(stage));
+            stage.getScene().setRoot(getPlayCompMenu(stage));
         });
-        singlePlayer.setStyle("-fx-base: rgba(145, 111, 38, 0.89); -fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt;");
+        singlePlayer.setStyle("-fx-base: rgba(139, 69, 19, 0.89); -fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt; -fx-background-radius: 50 50 50 50;");
         singlePlayer.setText("Single Player");
         singlePlayer.setMinSize(250, 75);
         Button multiPlayer = new Button();
         multiPlayer.setOnMouseClicked(e -> {
             stage.getScene().setRoot(getMultiplayerMenu(stage));
         });
-        multiPlayer.setStyle("-fx-base: rgba(145, 111, 38, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt;");
+        multiPlayer.setStyle("-fx-base: rgba(139, 69, 19, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt; -fx-background-radius: 50 50 50 50;");
         multiPlayer.setMinSize(250, 75);
         multiPlayer.setText("Multiplayer");
         Button quit = new Button();
         quit.setOnMouseClicked(e -> {
-            out.println("Quit");
-            out.flush();
+            stage.close();
             try {
+                out.println("Quit");
+                out.flush();
                 socket.close();
             } catch (IOException ex) {
                 System.out.println(ex.toString());
             }
-            stage.close();
         });
         quit.setMinSize(250, 75);
         quit.setText("Quit");
-        quit.setStyle("-fx-base: rgba(145, 111, 38, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt;");
+        quit.setStyle("-fx-base: rgba(139, 69, 19, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt; -fx-background-radius: 50 50 50 50;");
         VBox menu = new VBox();
         menu.setMaxSize(400, 500);
         menu.setStyle("-fx-background-color: rgba(165, 111, 38, 0.7); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50; -fx-border-color: black;");
@@ -134,60 +142,6 @@ public class Client extends Application {
         menu.getChildren().add(multiPlayer);
         menu.getChildren().add(quit);
         root.getChildren().add(menu);
-        return root;
-    }
-
-    private StackPane getSingleMenu(Stage stage) {
-        StackPane root = new StackPane();
-        File file = new File("bg.jpg");
-        BackgroundImage myBI = new BackgroundImage(new Image(file.toURI().toString(), 1920, 1080, false, true),
-                BackgroundRepeat.REPEAT, BackgroundRepeat.NO_REPEAT, BackgroundPosition.DEFAULT,
-                BackgroundSize.DEFAULT);
-        root.setBackground(new Background(myBI));
-        VBox diff = new VBox();
-        diff.setMaxSize(400, 700);
-        diff.setStyle("-fx-background-color: rgba(165, 111, 38, 0.7); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50; -fx-border-color: black;");
-        diff.setAlignment(Pos.CENTER);
-        diff.setSpacing(100);
-
-        Button easy = new Button();
-        Button medium = new Button();
-        Button hard = new Button();
-
-        easy.setOnMouseClicked(e -> {
-            difficulty = "E";
-            stage.getScene().setRoot(getPlayCompMenu(stage));
-        });
-        easy.setStyle("-fx-base: rgba(145, 111, 38, 0.89); -fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt;");
-        easy.setText("Easy");
-        easy.setMinSize(250, 75);
-
-        medium.setOnMouseClicked(e -> {
-            difficulty = "M";
-            stage.getScene().setRoot(getPlayCompMenu(stage));
-        });
-        medium.setStyle("-fx-base: rgba(145, 111, 38, 0.89); -fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt;");
-        medium.setText("Medium");
-        medium.setMinSize(250, 75);
-
-        hard.setOnMouseClicked(e -> {
-            difficulty = "H";
-            stage.getScene().setRoot(getPlayCompMenu(stage));
-        });
-        hard.setStyle("-fx-base: rgba(145, 111, 38, 0.89); -fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt;");
-        hard.setText("Hard");
-        hard.setMinSize(250, 75);
-
-        Button back = new Button();
-        back.setOnMouseClicked(e -> {
-            stage.getScene().setRoot(getMainMenu(stage));
-        });
-        back.setMinSize(250, 75);
-        back.setText("Back");
-        back.setStyle("-fx-base: rgba(145, 111, 38, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt;");
-
-        diff.getChildren().addAll(easy, medium, hard, back);
-        root.getChildren().add(diff);
         return root;
     }
 
@@ -202,14 +156,14 @@ public class Client extends Application {
         createLobby.setOnMouseClicked(e -> {
             stage.getScene().setRoot(getCreateLobbyMenu(stage));
         });
-        createLobby.setStyle("-fx-base: rgba(145, 111, 38, 0.89); -fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt;");
+        createLobby.setStyle("-fx-base: rgba(139, 69, 19, 0.89); -fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt; -fx-background-radius: 50 50 50 50;");
         createLobby.setText("Create lobby");
         createLobby.setMinSize(250, 75);
         Button joinLobby = new Button();
         joinLobby.setOnMouseClicked(e -> {
             stage.getScene().setRoot(getJoinLobbyMenu(stage));
         });
-        joinLobby.setStyle("-fx-base: rgba(145, 111, 38, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt;");
+        joinLobby.setStyle("-fx-base: rgba(139, 69, 19, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt; -fx-background-radius: 50 50 50 50;");
         joinLobby.setMinSize(250, 75);
         joinLobby.setText("Join lobby");
         Button back = new Button();
@@ -218,7 +172,7 @@ public class Client extends Application {
         });
         back.setMinSize(250, 75);
         back.setText("Back");
-        back.setStyle("-fx-base: rgba(145, 111, 38, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt;");
+        back.setStyle("-fx-base: rgba(139, 69, 19, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt; -fx-background-radius: 50 50 50 50;");
 
         VBox menu = new VBox();
         menu.setStyle("-fx-background-color: rgba(165, 111, 38, 0.7); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50; -fx-border-color: black;");
@@ -245,26 +199,26 @@ public class Client extends Application {
         VBox menu = new VBox();
         menu.setStyle("-fx-background-color: rgba(165, 111, 38, 0.7); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50; -fx-border-color: black;");
         menu.setSpacing(50);
-        menu.setMaxSize(400, 500);
+        menu.setMaxSize(400, 600);
 
         Button back = new Button();
         back.setOnMouseClicked(e -> {
-            stage.getScene().setRoot(getSingleMenu(stage));
+            stage.getScene().setRoot(getMainMenu(stage));
         });
         back.setMinSize(250, 75);
         back.setText("Back");
-        back.setStyle("-fx-base: rgba(145, 111, 38, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt;");
+        back.setStyle("-fx-base: rgba(139, 69, 19, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt; -fx-background-radius: 50 50 50 50;");
 
         Button play = new Button();
         play.setOnMouseClicked(e -> {
-            out.println("Single player " + colorChosen + " " + difficulty + " " + modesSingle[modeChosenSingle].split(" ")[0]);
+            out.println("Single player " + colorChosen + " " + diffs[diffChosen].charAt(0) + " " + modesSingle[modeChosenSingle].split(" ")[0]);
             out.flush();
-            clientThread = new ClientThread(root, in, out, stage);
+            clientThread = new ClientThread(root, in, out, stage, 'S');
             clientThread.start();
         });
         play.setMinSize(250, 75);
         play.setText("Play");
-        play.setStyle("-fx-base: rgba(145, 111, 38, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt;");
+        play.setStyle("-fx-base: rgba(139, 69, 19, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt; -fx-background-radius: 50 50 50 50;");
 
         HBox colorChooser = new HBox();
         colorChooser.setAlignment(Pos.CENTER);
@@ -301,7 +255,7 @@ public class Client extends Application {
 
         Polygon leftTriangle = new Polygon();
         leftTriangle.setStroke(Color.WHITE);
-        leftTriangle.setFill(Color.rgb(125, 96, 32));
+        leftTriangle.setFill(Color.rgb(139, 69, 19));
         leftTriangle.getPoints().addAll(new Double[]{
             0.0, 15.0,
             30.0, 0.0,
@@ -316,7 +270,7 @@ public class Client extends Application {
 
         Polygon rightTriangle = new Polygon();
         rightTriangle.setStroke(Color.WHITE);
-        rightTriangle.setFill(Color.rgb(125, 96, 32));
+        rightTriangle.setFill(Color.rgb(139, 69, 19));
         rightTriangle.getPoints().addAll(new Double[]{
             160.0, 115.0,
             130.0, 100.0,
@@ -331,7 +285,47 @@ public class Client extends Application {
 
         modeChooser.getChildren().addAll(leftTriangle, mode, rightTriangle);
 
-        menu.getChildren().addAll(colorChooser, modeChooser, play, back);
+        HBox diffChooser = new HBox();
+        diffChooser.setAlignment(Pos.CENTER);
+        diffChooser.setSpacing(50);
+        Text diff = new Text();
+        diff.setText(diffs[diffChosen]);
+        diff.setFont(Font.font("Verdana", FontPosture.ITALIC, 24));
+        diff.setFill(Color.BLACK);
+
+        Polygon leftTriangle2 = new Polygon();
+        leftTriangle2.setStroke(Color.WHITE);
+        leftTriangle2.setFill(Color.rgb(139, 69, 19));
+        leftTriangle2.getPoints().addAll(new Double[]{
+            0.0, 15.0,
+            30.0, 0.0,
+            30.0, 30.0});
+        leftTriangle2.setOnMouseClicked(e -> {
+            diffChosen--;
+            if (diffChosen < 0) {
+                diffChosen = diffs.length - 1;
+            }
+            diff.setText(diffs[diffChosen]);
+        });
+
+        Polygon rightTriangle2 = new Polygon();
+        rightTriangle2.setStroke(Color.WHITE);
+        rightTriangle2.setFill(Color.rgb(139, 69, 19));
+        rightTriangle2.getPoints().addAll(new Double[]{
+            160.0, 115.0,
+            130.0, 100.0,
+            130.0, 130.0});
+        rightTriangle2.setOnMouseClicked(e -> {
+            diffChosen++;
+            if (diffChosen >= diffs.length) {
+                diffChosen = 0;
+            }
+            diff.setText(diffs[diffChosen]);
+        });
+
+        diffChooser.getChildren().addAll(leftTriangle2, diff, rightTriangle2);
+
+        menu.getChildren().addAll(play, diffChooser, modeChooser, colorChooser, back);
         menu.setAlignment(Pos.CENTER);
         root.getChildren().add(menu);
         return root;
@@ -350,12 +344,19 @@ public class Client extends Application {
         VBox menu = new VBox();
         menu.setStyle("-fx-background-color: rgba(165, 111, 38, 0.7); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50; -fx-border-color: black;");
         menu.setSpacing(50);
-        menu.setMaxSize(400, 700);
+        menu.setMaxSize(450, 850);
 
         TextField tf = new TextField();
+        tf.setPromptText("Lobby ID");
         tf.setMaxWidth(250);
         tf.setPadding(new Insets(15, 0, 15, 0));
         tf.setStyle("-fx-font-weight: bold; -fx-font-size: 24pt;");
+
+        TextField tf2 = new TextField();
+        tf2.setPromptText("Lobby Name");
+        tf2.setMaxWidth(250);
+        tf2.setPadding(new Insets(15, 0, 15, 0));
+        tf2.setStyle("-fx-font-weight: bold; -fx-font-size: 24pt;");
 
         Button back = new Button();
         back.setOnMouseClicked(e -> {
@@ -363,35 +364,42 @@ public class Client extends Application {
         });
         back.setMinSize(250, 75);
         back.setText("Back");
-        back.setStyle("-fx-base: rgba(145, 111, 38, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt;");
+        back.setStyle("-fx-base: rgba(139, 69, 19, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt; -fx-background-radius: 50 50 50 50;");
 
         Button create = new Button();
         create.setOnMouseClicked(e -> {
             if (isNumeric(tf.getText())) {
                 id = Integer.valueOf(tf.getText());
-                String line;
-                try {
-                    out.println("Create lobby " + id + " " + colorChosen + " " + modes[modeChosen].split(" ")[0]);
-                    out.flush();
-                    line = in.readLine();
-                    if (line.equals("Ok")) {
-                        menu.getChildren().remove(txt);
-                        stage.getScene().setRoot(getWaitingMenu(stage));
-                        clientThread = new ClientThread(root, in, out, stage);
-                        clientThread.start();
-                    } else if (line.equals("Lobby already exists")) {
-                        txt.setText(line);
-                        menu.getChildren().remove(txt);
-                        menu.getChildren().add(txt);
+                String name = tf2.getText();
+                Platform.runLater(() -> {
+                    try {
+                        out.println("Create lobby " + id + " " + colorChosen + " " + modes[modeChosen].split(" ")[0] + " " + name.replaceAll(" ", "@"));
+                        out.flush();
+                        String line;
+                        line = in.readLine();
+                        if (line.equals("Ok")) {
+                            menu.getChildren().remove(txt);
+                            stage.getScene().setRoot(getWaitingMenu(stage));
+                            clientThread = new ClientThread(root, in, out, stage, 'M');
+                            clientThread.start();
+                        } else if (line.equals("Lobby already exists")) {
+                            txt.setText(line);
+                            menu.getChildren().remove(txt);
+                            menu.getChildren().add(txt);
+                        }
+                    } catch (IOException ex) {
+                        Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
                     }
-                } catch (IOException ex) {
-                    System.out.println(ex.toString());
-                }
+                });
+            } else {
+                txt.setText("ID must be a number.");
+                menu.getChildren().remove(txt);
+                menu.getChildren().add(txt);
             }
         });
         create.setMinSize(250, 75);
         create.setText("Create");
-        create.setStyle("-fx-base: rgba(145, 111, 38, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt;");
+        create.setStyle("-fx-base: rgba(139, 69, 19, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt; -fx-background-radius: 50 50 50 50;");
 
         HBox colorChooser = new HBox();
         colorChooser.setAlignment(Pos.CENTER);
@@ -428,7 +436,7 @@ public class Client extends Application {
 
         Polygon leftTriangle = new Polygon();
         leftTriangle.setStroke(Color.WHITE);
-        leftTriangle.setFill(Color.rgb(125, 96, 32));
+        leftTriangle.setFill(Color.rgb(139, 69, 19));
         leftTriangle.getPoints().addAll(new Double[]{
             0.0, 15.0,
             30.0, 0.0,
@@ -443,7 +451,7 @@ public class Client extends Application {
 
         Polygon rightTriangle = new Polygon();
         rightTriangle.setStroke(Color.WHITE);
-        rightTriangle.setFill(Color.rgb(125, 96, 32));
+        rightTriangle.setFill(Color.rgb(139, 69, 19));
         rightTriangle.getPoints().addAll(new Double[]{
             160.0, 115.0,
             130.0, 100.0,
@@ -457,7 +465,7 @@ public class Client extends Application {
         });
 
         modeChooser.getChildren().addAll(leftTriangle, mode, rightTriangle);
-        menu.getChildren().addAll(tf, create, modeChooser, colorChooser, back);
+        menu.getChildren().addAll(tf2, tf, create, modeChooser, colorChooser, back);
         menu.setAlignment(Pos.CENTER);
         root.getChildren().add(menu);
         return root;
@@ -476,50 +484,130 @@ public class Client extends Application {
         VBox menu = new VBox();
         menu.setStyle("-fx-background-color: rgba(165, 111, 38, 0.7); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50; -fx-border-color: black;");
         menu.setSpacing(50);
-        menu.setMaxSize(400, 500);
+        menu.setPadding(new Insets(30, 30, 30, 30));
+        menu.setMaxSize(1000, 800);
+        menu.setAlignment(Pos.TOP_CENTER);
+        root.getChildren().add(menu);
 
-        TextField tf = new TextField();
-        tf.setMaxWidth(250);
-        tf.setPadding(new Insets(15, 0, 15, 0));
-        tf.setStyle("-fx-font-weight: bold; -fx-font-size: 24pt;");
-
+        HBox buttons = new HBox();
+        buttons.setSpacing(600);
+        buttons.setAlignment(Pos.CENTER);
         Button back = new Button();
         back.setOnMouseClicked(e -> {
             stage.getScene().setRoot(getMultiplayerMenu(stage));
         });
-        back.setMinSize(250, 75);
+        back.setMinSize(200, 50);
         back.setText("Back");
-        back.setStyle("-fx-base: rgba(145, 111, 38, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt;");
+        back.setStyle("-fx-base: rgba(139, 69, 19, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt; -fx-background-radius: 50 50 50 50;");
 
-        Button join = new Button();
-        join.setOnMouseClicked(e -> {
-            if (isNumeric(tf.getText())) {
-                id = Integer.valueOf(tf.getText());
-                String line;
-                try {
-                    out.println("Join lobby " + id);
-                    out.flush();
-                    line = in.readLine();
-                    if (line.equals("Ok")) {
-                        menu.getChildren().remove(txt);
-                        clientThread = new ClientThread(root, in, out, stage);
-                        clientThread.start();
-                    } else if (line.equals("Lobby does not exist") || line.equals("Lobby is already full")) {
-                        txt.setText(line);
-                        menu.getChildren().remove(txt);
-                        menu.getChildren().add(txt);
+        Button refresh = new Button();
+        refresh.setOnMouseClicked(e -> {
+            stage.getScene().setRoot(getJoinLobbyMenu(stage));
+        });
+        refresh.setMinSize(200, 50);
+        refresh.setText("Refresh");
+        refresh.setStyle("-fx-base: rgba(139, 69, 19, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt; -fx-background-radius: 50 50 50 50;");
+
+        buttons.getChildren().addAll(refresh, back);
+        menu.getChildren().add(buttons);
+
+        VBox displayGames = new VBox();
+        displayGames.setSpacing(100);
+        displayGames.setPrefHeight(850);
+        displayGames.setAlignment(Pos.TOP_CENTER);
+        ScrollPane sp = new ScrollPane();
+        sp.setFitToHeight(true);
+        sp.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        sp.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        sp.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
+        sp.setContent(displayGames);
+        menu.getChildren().add(sp);
+
+        Platform.runLater(() -> {
+            getGames();
+            if (!"".equals(games)) {
+                String[] allGames = games.split("/");
+                for (String g : allGames) {
+                    String ID = g.split(" ")[0];
+                    String name = g.split(" ")[1].replaceAll("@", " ");
+                    String mod = g.split(" ")[2].replaceAll("@", " ");
+                    String p1color = g.split(" ")[3];
+
+                    HBox game = new HBox();
+                    game.setAlignment(Pos.CENTER);
+                    game.setSpacing(50);
+
+                    HBox lobbyInfo = new HBox();
+                    lobbyInfo.setMinSize(800, 200);
+                    lobbyInfo.setStyle("-fx-background-color: rgba(139, 69, 19, 1); -fx-background-radius: 50 50 50 50; -fx-border-color: black; -fx-border-radius: 50 50 50 50; -fx-border-width: 3px");
+
+                    VBox nameAndId = new VBox();
+                    nameAndId.setSpacing(100);
+                    nameAndId.setAlignment(Pos.CENTER);
+                    nameAndId.setPrefSize(250, 200);
+                    Text t = new Text();
+                    t.setFont(Font.font("Verdana", FontPosture.ITALIC, 20));
+                    t.setText("ID: " + ID);
+
+                    Text t2 = new Text();
+                    t2.setFont(Font.font("Verdana", FontPosture.ITALIC, 20));
+                    t2.setText("Name: " + name);
+                    nameAndId.getChildren().addAll(t, t2);
+
+                    VBox modeAndColor = new VBox();
+                    modeAndColor.setAlignment(Pos.CENTER);
+                    modeAndColor.setSpacing(50);
+                    modeAndColor.setPrefSize(550, 200);
+                    Text t3 = new Text();
+                    t3.setFont(Font.font("Verdana", FontPosture.ITALIC, 20));
+                    t3.setText("Mode: " + mod);
+
+                    HBox colorChooser = new HBox();
+                    colorChooser.setAlignment(Pos.CENTER);
+                    ImageView imageView = new ImageView();
+                    File file2;
+                    if (p1color.equals("white")) {
+                        file2 = new File("Pieces\\W_King.png");
+                    } else {
+                        file2 = new File("Pieces\\B_King.png");
                     }
-                } catch (IOException ex) {
-                    System.out.println(ex.toString());
+                    Image image = new Image(file2.toURI().toString());
+                    imageView.setImage(image);
+                    colorChooser.getChildren().add(imageView);
+                    modeAndColor.getChildren().addAll(t3, colorChooser);
+
+                    lobbyInfo.getChildren().addAll(nameAndId, modeAndColor);
+
+                    Button join = new Button();
+                    join.setMinSize(100, 50);
+                    join.setText("Join");
+                    join.setStyle("-fx-base: rgba(139, 69, 19, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt; -fx-background-radius: 50 50 50 50;");
+                    join.setOnMouseClicked(e -> {
+                        String line;
+                        try {
+                            out.println("Join lobby " + ID);
+                            out.flush();
+                            line = in.readLine();
+                            if (line.equals("Ok")) {
+                                menu.getChildren().remove(txt);
+                                clientThread = new ClientThread(root, in, out, stage, 'M');
+                                clientThread.start();
+                            } else if (line.equals("Lobby does not exist") || line.equals("Lobby is already full")) {
+                                txt.setText(line);
+                                menu.getChildren().remove(txt);
+                                menu.getChildren().add(txt);
+                            }
+                        } catch (IOException ex) {
+                            System.out.println(ex.toString());
+                        }
+                    });
+                    game.getChildren().addAll(lobbyInfo, join);
+
+                    displayGames.getChildren().add(game);
                 }
             }
         });
-        join.setMinSize(250, 75);
-        join.setText("Join");
-        join.setStyle("-fx-base: rgba(145, 111, 38, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt;");
-        menu.getChildren().addAll(tf, join, back);
-        menu.setAlignment(Pos.CENTER);
-        root.getChildren().add(menu);
+
         return root;
     }
 
@@ -548,5 +636,15 @@ public class Client extends Application {
         textContainer.getChildren().add(txt);
         root.getChildren().add(textContainer);
         return root;
+    }
+
+    private void getGames() {
+        try {
+            out.println("Get lobbies");
+            out.flush();
+            games = in.readLine();
+        } catch (IOException ex) {
+            System.out.println("Error communicating with the server");
+        }
     }
 }

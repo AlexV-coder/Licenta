@@ -27,6 +27,7 @@ public class Game {
     String lastMove;
     String mode;
     String board[][];
+    String name;
 
     Game() {
         lastMove = "-----";

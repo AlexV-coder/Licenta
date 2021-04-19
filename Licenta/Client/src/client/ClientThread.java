@@ -20,6 +20,8 @@ import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.Background;
@@ -28,6 +30,8 @@ import javafx.scene.layout.BackgroundPosition;
 import javafx.scene.layout.BackgroundRepeat;
 import javafx.scene.layout.BackgroundSize;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -45,28 +49,34 @@ public class ClientThread extends Thread {
 
     PrintWriter out;
     BufferedReader in;
-    Stage stage;
+
     String[][] board = new String[8][8];
     Map<Character, Image> images = new HashMap<>();
+    List<String> history;
+
     String selectedSquare = null;
+    String customBoard[][];
+    String lastMove;
+
+    char mode;
     char pieceSelected;
     boolean stop;
     char turn;
     char promote = ' ';
-    GraphicsContext gc;
     char playerNr;
+    int points;
+
+    Stage stage;
     StackPane root;
     StackPane currentStackPane;
-    String lastMove;
-    int points;
-    String customBoard[][];
-    List<String> history;
+    GraphicsContext gc;
 
-    ClientThread(StackPane sp, BufferedReader in, PrintWriter out, Stage stage) {
+    ClientThread(StackPane sp, BufferedReader in, PrintWriter out, Stage stage, char m) {
         this.in = in;
         this.out = out;
         this.stage = stage;
         this.root = sp;
+        this.mode = m;
         points = 39;
         lastMove = "-----";
         customBoard = new String[][]{
@@ -120,7 +130,7 @@ public class ClientThread extends Thread {
             while (!stop) {
                 line = in.readLine();
                 String result = "";
-                if (line.charAt(0) != '1' && line.charAt(0) != '2') {
+                if (line.equals("victory") || line.equals("loss") || line.equals("draw")) {
                     switch (line) {
                         case "victory":
                             result = "You won!";
@@ -137,6 +147,12 @@ public class ClientThread extends Thread {
                     stop = true;
                     stage.getScene().setRoot(getPostMatchMenu(stage, result));
                     break;
+                }
+
+                if (line.equals("Suggestion")) {
+                    line = in.readLine();
+                    drawSuggestedMove(line);
+                    continue;
                 }
 
                 lastMove = line.substring(line.length() - 5, line.length());
@@ -177,8 +193,9 @@ public class ClientThread extends Thread {
 
         StackPane boardTexture = new StackPane();
         boardTexture.setPrefSize(875, 875);
+        boardTexture.setStyle("-fx-border-color: black; -fx-border-width: 5px;");
         boardTexture.setMaxSize(875, 875);
-        file = new File("texture.jpg");
+        file = new File("texture.png");
         BackgroundImage myBI2 = new BackgroundImage(new Image(file.toURI().toString(), 875, 875, false, true),
                 BackgroundRepeat.REPEAT, BackgroundRepeat.NO_REPEAT, BackgroundPosition.DEFAULT,
                 BackgroundSize.DEFAULT);
@@ -187,29 +204,53 @@ public class ClientThread extends Thread {
         boardTexture.getChildren().add(canvas);
 
         StackPane showHistory = new StackPane();
+        showHistory.setAlignment(Pos.TOP_CENTER);
         showHistory.setPrefSize(200, 800);
         showHistory.setStyle("-fx-background-color: rgba(165, 111, 38, 0.7); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50; -fx-border-color: black;");
+
+        HBox hbox = new HBox();
+        hbox.setAlignment(Pos.TOP_CENTER);
+        hbox.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
+        hbox.setPrefWidth(200);
+
+        ScrollPane scrollPane = new ScrollPane(hbox);
+        scrollPane.setFitToHeight(true);
+        scrollPane.setHbarPolicy(ScrollBarPolicy.NEVER);
+        scrollPane.setVbarPolicy(ScrollBarPolicy.NEVER);
+        scrollPane.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
+        showHistory.getChildren().add(scrollPane);
         Text txt = new Text();
         txt.setFont(Font.font("Verdana", FontPosture.ITALIC, 17));
-        showHistory.setAlignment(Pos.TOP_CENTER);
-        showHistory.getChildren().add(txt);
+        hbox.getChildren().add(txt);
 
-        boardAndHistory.getChildren().addAll(showHistory, boardTexture);
+        Region region1 = new Region();
+        region1.setPrefWidth(200);
+        HBox.setHgrow(region1, Priority.ALWAYS);
+        Region region2 = new Region();
+        region2.setPrefWidth(425);
+        HBox.setHgrow(region2, Priority.ALWAYS);
+
+        boardAndHistory.getChildren().addAll(region1, showHistory, boardTexture, region2);
         boardAndHistory.setSpacing(50);
         boardAndHistory.setAlignment(Pos.CENTER);
 
         HBox buttons = new HBox();
+        buttons.setStyle("-fx-background-color: rgba(165, 111, 38, 0.7); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50; -fx-border-color: black;");
+        buttons.setMaxWidth(450);
+        buttons.setPrefHeight(100);
         buttons.setSpacing(50);
         buttons.setAlignment(Pos.CENTER);
         container.getChildren().add(buttons);
         Button resign = new Button();
         resign.setOnMouseClicked(e -> {
-            out.println("Resign");
-            out.flush();
+            if (playerNr == turn) {
+                out.println("Resign");
+                out.flush();
+            }
         });
 
         resign.setPadding(new Insets(10, 10, 10, 10));
-        resign.setStyle("-fx-base: rgba(145, 111, 38, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt;");
+        resign.setStyle("-fx-base: rgba(139, 69, 19, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt; -fx-background-radius: 50 50 50 50;");
 
         ImageView imageView = new ImageView();
         file = new File("resign.png");
@@ -217,7 +258,29 @@ public class ClientThread extends Thread {
         imageView.setImage(image);
         resign.setGraphic(imageView);
 
-        buttons.getChildren().add(resign);
+        Button suggest = new Button();
+        suggest.setMinWidth(80);
+        suggest.setPadding(new Insets(10, 10, 10, 10));
+        suggest.setStyle("-fx-base: rgba(139, 69, 19, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt; -fx-background-radius: 50 50 50 50;");
+        suggest.setOnMouseClicked(e -> {
+            if (playerNr == turn) {
+                out.println("Suggest");
+                out.flush();
+            }
+        });
+        imageView = new ImageView();
+        file = new File("bulb.png");
+        image = new Image(file.toURI().toString());
+        imageView.setImage(image);
+        suggest.setGraphic(imageView);
+
+        if (mode == 'S') {
+            buttons.setMaxWidth(350);
+            buttons.getChildren().addAll(suggest, resign);
+        } else {
+            buttons.setMaxWidth(200);
+            buttons.getChildren().addAll(resign);
+        }
         container.getChildren().add(boardAndHistory);
         currentStackPane.getChildren().add(container);
         gc = canvas.getGraphicsContext2D();
@@ -273,7 +336,7 @@ public class ClientThread extends Thread {
         try {
             for (int i = 0; i < 8; i++) {
                 for (int j = 0; j < 8; j++) {
-                    if ((i + j) % 2 == 0) {
+                    if ((i + j) % 2 == 1) {
                         gc.setFill(Color.rgb(210, 105, 30));
                     } else {
                         gc.setFill(Color.rgb(255, 222, 173));
@@ -301,7 +364,7 @@ public class ClientThread extends Thread {
             for (int i = 0; i < 8; i++) {
                 for (int j = 0; j < 8; j++) {
                     if (board[i][j].equals("0")) {
-                        if ((i + j) % 2 == 0) {
+                        if ((i + j) % 2 == 1) {
                             gc.setFill(Color.rgb((int) (210 * 0.15), (int) (105 * 0.15), (int) (30 * 0.15)));
                         } else {
                             gc.setFill(Color.rgb((int) (255 * 0.15), (int) (222 * 0.15), (int) (173 * 0.15)));
@@ -387,10 +450,11 @@ public class ClientThread extends Thread {
             imageView.setImage(image);
             back.setGraphic(imageView);
             back.setPadding(new Insets(10, 10, 10, 10));
-            back.setStyle("-fx-base: rgba(145, 111, 38, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt;");
+            back.setStyle("-fx-base: rgba(139, 69, 19, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt; -fx-background-radius: 50 50 50 50;");
             currentStackPane.getChildren().stream().filter((n) -> (n instanceof VBox)).forEachOrdered((n) -> {
                 ((VBox) n).getChildren().stream().filter((m) -> (m instanceof HBox)).forEachOrdered((Node m) -> {
-                    if (((HBox) m).getChildren().size() == 1) {
+                    if (((HBox) m).getChildren().get(0) instanceof Button) {
+                        ((HBox) m).setMaxWidth(((HBox) m).getWidth() + 150);
                         Platform.runLater(() -> {
                             ((VBox) n).getChildren().add(textContainer);
                             ((HBox) m).getChildren().add(back);
@@ -473,7 +537,7 @@ public class ClientThread extends Thread {
         Image image = new Image(file.toURI().toString());
         imageView.setImage(image);
         submit.setGraphic(imageView);
-        submit.setStyle("-fx-base: rgba(145, 111, 38, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt;");
+        submit.setStyle("-fx-base: rgba(139, 69, 19, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt; -fx-background-radius: 50 50 50 50;");
         submit.setPadding(new Insets(10, 10, 10, 10));
         submit.setOnMouseClicked(e -> {
             String sendBoard = "";
@@ -491,7 +555,7 @@ public class ClientThread extends Thread {
         image = new Image(file.toURI().toString());
         imageView2.setImage(image);
         delete.setGraphic(imageView2);
-        delete.setStyle("-fx-base: rgba(145, 111, 38, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt;");
+        delete.setStyle("-fx-base: rgba(139, 69, 19, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt; -fx-background-radius: 50 50 50 50;");
         delete.setPadding(new Insets(10, 10, 10, 10));
         delete.setOnMouseClicked(e -> {
             if (selectedSquare != null) {
@@ -583,7 +647,7 @@ public class ClientThread extends Thread {
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
                 if (i < 6) {
-                    if ((i + j) % 2 == 0) {
+                    if ((i + j) % 2 == 1) {
                         gc.setFill(Color.rgb((int) (210 * 0.15), (int) (105 * 0.15), (int) (30 * 0.15)));
                     } else {
                         gc.setFill(Color.rgb((int) (255 * 0.15), (int) (222 * 0.15), (int) (173 * 0.15)));
@@ -591,7 +655,7 @@ public class ClientThread extends Thread {
 
                     gc.fillRect(j * 100, i * 100, 100, 100);
                 } else {
-                    if ((i + j) % 2 == 0) {
+                    if ((i + j) % 2 == 1) {
                         gc.setFill(Color.rgb((int) (210), (int) (105), (int) (30)));
                     } else {
                         gc.setFill(Color.rgb((int) (255), (int) (222), (int) (173)));
@@ -616,20 +680,23 @@ public class ClientThread extends Thread {
     private void showHistory() {
         currentStackPane.getChildren().stream().filter((n) -> (n instanceof VBox)).forEachOrdered((n) -> {
             ((VBox) n).getChildren().stream().filter((m) -> (m instanceof HBox)).forEachOrdered((Node m) -> {
-                if (((HBox) m).getChildren().size() == 2) {
-                    ((HBox) m).getChildren().stream().filter((k) -> (k instanceof StackPane)).forEachOrdered((Node k) -> {
-                        ((StackPane) k).getChildren().stream().filter((t) -> (t instanceof Text)).forEachOrdered((Node t) -> {
-                            Platform.runLater(() -> {
-                                String txtToShow = "\n";
-                                for (int i = 0; i < history.size(); i++) {
-                                    String s = history.get(i);
-                                    if (s.length() == 10) {
-                                        txtToShow += (i + 1) + ". " + s.substring(0, 5) + " - " + s.substring(5, 10) + "\n\n";
-                                    } else {
-                                        txtToShow += (i + 1) + ". " + s.substring(0, 5);
+                if (((HBox) m).getChildren().get(0) instanceof Region) {
+                    ((HBox) m).getChildren().stream().filter((sp) -> (sp instanceof StackPane)).forEachOrdered((Node sp) -> {
+                        ((StackPane) sp).getChildren().stream().filter((sp2) -> (sp2 instanceof ScrollPane)).forEachOrdered((Node sp2) -> {
+                            Node hb = ((ScrollPane) sp2).getContent();
+                            ((HBox) hb).getChildren().stream().filter((t) -> (t instanceof Text)).forEachOrdered((Node t) -> {
+                                Platform.runLater(() -> {
+                                    String txtToShow = "\n";
+                                    for (int i = 0; i < history.size(); i++) {
+                                        String s = history.get(i);
+                                        if (s.length() == 10) {
+                                            txtToShow += (i + 1) + ". " + s.substring(0, 5) + " - " + s.substring(5, 10) + "\n\n";
+                                        } else {
+                                            txtToShow += (i + 1) + ". " + s.substring(0, 5);
+                                        }
                                     }
-                                }
-                                ((Text) t).setText(txtToShow);
+                                    ((Text) t).setText(txtToShow);
+                                });
                             });
                         });
                     });
@@ -732,12 +799,115 @@ public class ClientThread extends Thread {
                     history.add(moveToNotation(convertToOtherSide(lm)));
                 }
             }
-        } else if(!history.isEmpty() || playerNr == '2'){
+        } else if (!history.isEmpty() || playerNr == '2') {
             if (!history.isEmpty() && history.get(history.size() - 1).length() == 5) {
                 history.set(history.size() - 1, history.get(history.size() - 1) + " ??? ");
             } else {
                 history.add(" ??? ");
             }
         }
+    }
+
+    private void drawSuggestedMove(String move) {
+        if (playerNr == '2') {
+            move = convertToOtherSide(move);
+        }
+        int y1 = move.charAt(0) - 48;
+        int x1 = move.charAt(1) - 48;
+        int y2 = move.charAt(2) - 48;
+        int x2 = move.charAt(3) - 48;
+
+        x1 = x1 * 100 + 50 - 1;
+        y1 = y1 * 100 + 50;
+        x2 = x2 * 100 + 50 - 1;
+        y2 = y2 * 100 + 50;
+
+        int x3, y3, x4, y4, x5, y5;
+        // diagonal
+        if (Math.abs(x2 - x1) == Math.abs(y2 - y1)) {
+            if ((x2 - x1) * (y2 - y1) < 0) {
+                x4 = x2 - 15;
+                x5 = x2 + 15;
+                y4 = y2 - 15;
+                y5 = y2 + 15;
+            } else {
+                x4 = x2 - 15;
+                x5 = x2 + 15;
+                y4 = y2 + 15;
+                y5 = y2 - 15;
+            }
+            if (x2 > x1) {
+                x3 = x2 + 20;
+            } else {
+                x3 = x2 - 20;
+            }
+            if (y2 > y1) {
+                y3 = y2 + 20;
+            } else {
+                y3 = y2 - 20;
+            }
+            drawLine(x1, y1, x2, y2);
+            drawTriangle(x3, y3, x4, y4, x5, y5);
+            // vertical
+        } else if (x1 == x2) {
+            x4 = x2 - 20;
+            x5 = x2 + 20;
+            y4 = y2;
+            y5 = y2;
+            x3 = x2;
+            if (y2 > y1) {
+                y3 = y2 + 30;
+            } else {
+                y3 = y2 - 30;
+            }
+            drawLine(x1, y1, x2, y2);
+            drawTriangle(x3, y3, x4, y4, x5, y5);
+            //horizontal
+        } else if (y1 == y2) {
+            x4 = x2;
+            x5 = x2;
+            y4 = y2 - 20;
+            y5 = y2 + 20;
+            y3 = y2;
+            if (x2 > x1) {
+                x3 = x2 + 30;
+            } else {
+                x3 = x2 - 30;
+            }
+            drawLine(x1, y1, x2, y2);
+            drawTriangle(x3, y3, x4, y4, x5, y5);
+        } else {
+            drawLine(x1, y1, x1, y2);
+            drawLine(x1, y2, x2, y2);
+            x4 = x2;
+            x5 = x2;
+            y4 = y2 - 20;
+            y5 = y2 + 20;
+            y3 = y2;
+            if (x2 > x1) {
+                x3 = x2 + 30;
+            } else {
+                x3 = x2 - 30;
+            }
+            drawTriangle(x3, y3, x4, y4, x5, y5);
+        }
+
+    }
+
+    private void drawLine(int x1, int y1, int x2, int y2) {
+        gc.setStroke(Color.GREEN);
+        gc.setLineWidth(15.0);
+        gc.beginPath();
+        gc.moveTo(x1, y1);
+        gc.lineTo(x2, y2);
+        gc.stroke();
+        gc.closePath();
+    }
+
+    private void drawTriangle(int x3, int y3, int x4, int y4, int x5, int y5) {
+        gc.setFill(Color.GREEN);
+        double[] xs = {x3, x4, x5};
+        double[] ys = {y3, y4, y5};
+        gc.fillPolygon(xs, ys, 3);
     }
 }

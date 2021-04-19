@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
+import static server.MoveGenerator.CENTRE;
 import static server.MoveGenerator.attackerBoardB;
 import static server.MoveGenerator.attackerBoardW;
 import static server.MoveGenerator.generateMovesB;
@@ -88,6 +89,42 @@ public class PC {
         -30, -40, -40, -50, -50, -40, -40, -30,
         -30, -40, -40, -50, -50, -40, -40, -30};
 
+    double[] kingWHill = {0, 0, 0, 0, 0, 0, 0, 0,
+        0, 50, 50, 50, 50, 50, 50, 0,
+        0, 50, 100, 100, 100, 100, 50, 0,
+        0, 50, 100, 300000, 300000, 100, 50, 0,
+        0, 50, 100, 300000, 300000, 100, 50, 0,
+        0, 50, 100, 100, 100, 100, 50, 0,
+        0, 50, 50, 50, 50, 50, 50, 0,
+        0, 0, 0, 0, 0, 0, 0, 0};
+
+    double[] kingBHill = {0, 0, 0, 0, 0, 0, 0, 0,
+        0, 50, 50, 50, 50, 50, 50, 0,
+        0, 50, 100, 100, 100, 100, 50, 0,
+        0, 50, 100, 300000, 300000, 100, 50, 0,
+        0, 50, 100, 300000, 300000, 100, 50, 0,
+        0, 50, 100, 100, 100, 100, 50, 0,
+        0, 50, 50, 50, 50, 50, 50, 0,
+        0, 0, 0, 0, 0, 0, 0, 0};
+
+    double[] kingWLate = {0, 0, 0, 0, 0, 0, 0, 0,
+        0, 25, 25, 25, 25, 25, 25, 0,
+        0, 25, 50, 50, 50, 50, 25, 0,
+        0, 25, 50, 75, 75, 50, 25, 0,
+        0, 25, 50, 75, 75, 50, 25, 0,
+        0, 25, 50, 50, 50, 50, 25, 0,
+        0, 25, 25, 25, 25, 25, 25, 0,
+        0, 0, 0, 0, 0, 0, 0, 0};
+
+    double[] kingBLate = {0, 0, 0, 0, 0, 0, 0, 0,
+        0, 25, 25, 25, 25, 25, 25, 0,
+        0, 25, 50, 50, 50, 50, 25, 0,
+        0, 25, 50, 75, 75, 50, 25, 0,
+        0, 25, 50, 75, 75, 50, 25, 0,
+        0, 25, 50, 50, 50, 50, 25, 0,
+        0, 25, 25, 25, 25, 25, 25, 0,
+        0, 0, 0, 0, 0, 0, 0, 0};
+
     double pawnW[] = new double[64];
     double bishopW[] = new double[64];
     double knightW[] = new double[64];
@@ -110,13 +147,15 @@ public class PC {
     int side = 1;
     Bitboards bitboards;
     Map<Long, TableEntry> transpositionTable = new HashMap<>();
-    String[][] killerMoves = new String[9][2];
+    String[][] killerMoves = new String[11][2];
     String compMove;
+    String mode;
 
-    PC(Bitboards bitboards, int s, int depth) {
+    PC(Bitboards bitboards, int s, int depth, String mode) {
         this.bitboards = new Bitboards(bitboards);
         maxDepth = depth;
         side = s;
+        this.mode = mode;
         transpose(pawnB, pawnW);
         transpose(bishopB, bishopW);
         transpose(knightB, knightW);
@@ -130,10 +169,22 @@ public class PC {
                 MoveGenerator.randomIntegers[i][j] = gen.nextLong();
             }
         }
+        if (mode.equals("King")) {
+            System.arraycopy(kingBHill, 0, kingB, 0, 64);
+            System.arraycopy(kingBHill, 0, kingB, 0, 64);
+        }
     }
 
     public String move() {
-        killerMoves = new String[9][2];
+        if (mode.equals("King")) {
+            return moveKingOfTheHill();
+        } else {
+            return moveRegular();
+        }
+    }
+
+    public String moveRegular() {
+        killerMoves = new String[11][2];
         transpositionTable = new HashMap<>();
         nps = 0;
         //iterative deepening
@@ -141,6 +192,36 @@ public class PC {
             negaMax(bitboards, i, Integer.MIN_VALUE, Integer.MAX_VALUE, side, false);
         }
         makeMove(bitboards, compMove);
+        if (bitboards.stage == '1' && checkForLateGame(bitboards)) {
+            bitboards.stage = '2';
+            System.arraycopy(kingBLate, 0, kingB, 0, 64);
+            System.arraycopy(kingWLate, 0, kingB, 0, 64);
+            maxDepth += 2;
+        }
+        if (bitboards.stage == '2' && !checkForLateGame(bitboards)) {
+            bitboards.stage = '1';
+            maxDepth -= 2;
+        }
+        return compMove;
+    }
+
+    public String moveKingOfTheHill() {
+        killerMoves = new String[9][2];
+        transpositionTable = new HashMap<>();
+        nps = 0;
+        //iterative deepening
+        for (int i = 2; i <= maxDepth; i = i + 2) {
+            negaMaxKingOfTheHill(bitboards, i, Integer.MIN_VALUE, Integer.MAX_VALUE, side, false);
+        }
+        makeMove(bitboards, compMove);
+        if (bitboards.stage == '1' && checkForLateGame(bitboards)) {
+            bitboards.stage = '2';
+            maxDepth += 2;
+        }
+        if (bitboards.stage == '2' && !checkForLateGame(bitboards)) {
+            bitboards.stage = '1';
+            maxDepth -= 2;
+        }
         return compMove;
     }
 
@@ -160,7 +241,7 @@ public class PC {
         long WP = bitboards.WP;
         long BP = bitboards.BP;
         int index;
-        
+
         index = Long.numberOfTrailingZeros(WK);
         whiteScore += 2000 + kingW[index];
 
@@ -696,6 +777,207 @@ public class PC {
             {"P", "P", "P", "P", "P", "P", "P", "P"},
             {"R", "N", "B", "Q", "K", "B", "N", "R"}};
         return board;
+    }
+
+    private double negaMaxKingOfTheHill(Bitboards bitboards, int depth, double alpha, double beta, int side, boolean inNullMove) {
+        double alphaOrig = alpha;
+        String moveFromTT = "";
+        TableEntry position = transpositionTable.get(bitboards.hashKey);
+        if (position != null && position.turn == bitboards.turn && (position.enPassant == null ? bitboards.enPassant == null : position.enPassant.equals(bitboards.enPassant)) && Arrays.equals(bitboards.castle, position.castle)) {
+            moveFromTT = position.bestMove;
+            if (position.depth >= depth) {
+                switch (position.pruneType) {
+                    case 0:
+                        return position.score;
+                    case -1:
+                        alpha = Math.max(alpha, position.score);
+                        break;
+                    default:
+                        beta = Math.min(beta, position.score);
+                        break;
+                }
+                if (alpha >= beta) {
+                    return position.score;
+                }
+            }
+        }
+
+        if (depth == 0) {
+            return side * calculateScore(bitboards);
+        }
+
+        String moves;
+        String bestMove = "";
+
+        if (bitboards.turn) {
+            moves = generateMovesW(bitboards);
+        } else {
+            moves = generateMovesB(bitboards);
+        }
+
+        if (bitboards.turn) {
+            if ((CENTRE & bitboards.BK) != 0) {
+                return -300000 - depth;
+            }
+        } else {
+            if ((CENTRE & bitboards.WK) != 0) {
+                return -300000 - depth;
+            }
+        }
+
+        if (moves.length() == 0) {
+            if (bitboards.turn) {
+                if (attackerBoardW(bitboards, bitboards.WK) == 0) {
+                    return 0;
+                } else {
+                    return -300000 - depth;
+                }
+            } else {
+                if (attackerBoardB(bitboards, bitboards.BK) == 0) {
+                    return 0;
+                } else {
+                    return -300000 - depth;
+                }
+            }
+        }
+
+        //null move
+        if (!inNullMove && ((bitboards.turn && attackerBoardW(bitboards, bitboards.WK) == 0) || (!bitboards.turn && attackerBoardB(bitboards, bitboards.BK) == 0)) && depth >= R + 1) {
+            Bitboards child = new Bitboards(bitboards);
+            child.turn = !child.turn;
+            double val = -negaMaxKingOfTheHill(child, depth - R - 1, -beta, -beta + 1, -side, true);
+            if (val >= beta) {
+                return val;
+            }
+        }
+        //move ordering
+        String captures = "";
+        String pawnMoves = "";
+        String killers = "";
+        String others = "";
+        for (int i = 0; i < moves.length(); i += 5) {
+            String mv = moves.substring(i, i + 5);
+            if ((bitboards.A & 1L << (Character.getNumericValue(mv.charAt(2)) * 8 + Character.getNumericValue(mv.charAt(3)))) != 0) {
+                captures += mv;
+            } else if ((mv.equals(killerMoves[depth][0]) || mv.equals(killerMoves[depth][1]))) {
+                killers += mv;
+            } else if (((bitboards.WP | bitboards.BP) & 1L << (Character.getNumericValue(mv.charAt(0)) * 8 + Character.getNumericValue(mv.charAt(1)))) != 0) {
+                pawnMoves += mv;
+            } else {
+                others += mv;
+            }
+        }
+        moves = captures + killers + pawnMoves + others;
+        if (!"".equals(moveFromTT)) {
+            moves = moves.replace(moveFromTT, "");
+            moves = moveFromTT + moves;
+        }
+        double score = Integer.MIN_VALUE;
+        for (int i = 0; i < moves.length(); i += 5) {
+            String mv = moves.substring(i, i + 5);
+            Bitboards child = new Bitboards(bitboards);
+            makeMove(child, mv);
+            double val = -negaMaxKingOfTheHill(child, depth - 1, -beta, -alpha, -side, inNullMove);
+            if (val > score) {
+                score = val;
+                bestMove = mv;
+            }
+            alpha = Math.max(alpha, score);
+            if (alpha >= beta) {
+                if ((bitboards.A & 1L << (Character.getNumericValue(bestMove.charAt(2)) * 8 + Character.getNumericValue(bestMove.charAt(3)))) == 0) {
+                    killerMoves[depth][1] = killerMoves[depth][0];
+                    killerMoves[depth][0] = bestMove;
+                }
+                break;
+            }
+        }
+        int flag = 0;
+        if (score <= alphaOrig) {
+            flag = 1;
+        } else if (score >= beta) {
+            flag = -1;
+        }
+        transpositionTable.put(bitboards.hashKey, new TableEntry(bitboards.turn, depth, bestMove, (int) score, bitboards.enPassant, bitboards.castle, flag));
+        if (depth == maxDepth) {
+            compMove = bestMove;
+        }
+        return score;
+    }
+
+    private boolean checkForLateGame(Bitboards bitboards) {
+        int whiteScore = 0;
+        int blackScore = 0;
+        long WK = bitboards.WK;
+        long BK = bitboards.BK;
+        long WQ = bitboards.WQ;
+        long BQ = bitboards.BQ;
+        long WR = bitboards.WR;
+        long BR = bitboards.BR;
+        long WB = bitboards.WB;
+        long BB = bitboards.BB;
+        long WN = bitboards.WN;
+        long BN = bitboards.BN;
+        long WP = bitboards.WP;
+        long BP = bitboards.BP;
+        int index;
+
+        index = Long.numberOfTrailingZeros(WK);
+        whiteScore += 2000 + kingW[index];
+
+        while (WQ != 0) {
+            index = Long.numberOfTrailingZeros(WQ);
+            whiteScore += 900 + queenW[index];
+            WQ = WQ & (WQ - 1);
+        }
+        while (WR != 0) {
+            index = Long.numberOfTrailingZeros(WR);
+            whiteScore += 500 + rookW[index];
+            WR = WR & (WR - 1);
+        }
+        while (WB != 0) {
+            index = Long.numberOfTrailingZeros(WB);
+            whiteScore += 330 + bishopW[index];
+            WB = WB & (WB - 1);
+        }
+        while (WN != 0) {
+            index = Long.numberOfTrailingZeros(WN);
+            whiteScore += 320 + knightW[index];
+            WN = WN & (WN - 1);
+        }
+        while (WP != 0) {
+            index = Long.numberOfTrailingZeros(WP);
+            whiteScore += 100 + pawnW[index];
+            WP = WP & (WP - 1);
+        }
+
+        index = Long.numberOfTrailingZeros(BK);
+        blackScore += 2000 + kingB[index];
+        while (BQ != 0) {
+            index = Long.numberOfTrailingZeros(BQ);
+            blackScore += 900 + queenB[index];
+            BQ = BQ & (BQ - 1);
+        }
+        while (BR != 0) {
+            index = Long.numberOfTrailingZeros(BR);
+            blackScore += 500 + rookB[index];
+            BR = BR & (BR - 1);
+        }
+        while (BB != 0) {
+            index = Long.numberOfTrailingZeros(BB);
+            blackScore += 330 + bishopB[index];
+            BB = BB & (BB - 1);
+        }
+        while (BN != 0) {
+            index = Long.numberOfTrailingZeros(BN);
+            blackScore += 320 + knightB[index];
+            BN = BN & (BN - 1);
+        }
+        while (BP != 0) {
+            index = Long.numberOfTrailingZeros(BP);
+            blackScore += 100 + pawnB[index];
+            BP = BP & (BP - 1);
+        }
+        return blackScore <= 3500 && whiteScore <= 3500;
     }
 
 }

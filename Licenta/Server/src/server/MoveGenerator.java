@@ -208,7 +208,7 @@ public class MoveGenerator {
                 //generate moves that capture the piece giving check
                 while (captureCheck != 0) {
                     int index = Long.numberOfTrailingZeros(captureCheck);
-                    if (bitboards.enPassant != null && bitboards.enPassant.charAt(0) - 48 == attackerIndex / 8 && bitboards.enPassant.charAt(1) - 48 == attackerIndex % 8 && (1L << index & bitboards.WP) != 0 && ((captureCheck >>> 1 & checks) != 0 || (captureCheck << 1 & checks) != 0)) {
+                    if (bitboards.enPassant != null && bitboards.enPassant.charAt(0) - 48 == attackerIndex / 8 && bitboards.enPassant.charAt(1) - 48 == attackerIndex % 8 && ((1L << index) & bitboards.WP) != 0 && (((1L << index) >>> 1 & checks) != 0 || ((1L << index) << 1 & checks) != 0)) {
                         moves += ("" + (index / 8) + (index % 8) + (attackerIndex / 8 - 1) + (attackerIndex % 8) + " ");
                     } else {
                         moves += ("" + (index / 8) + (index % 8) + (attackerIndex / 8) + (attackerIndex % 8) + " ");
@@ -411,7 +411,7 @@ public class MoveGenerator {
                 //generate moves that capture the piece giving check
                 while (captureCheck != 0) {
                     int index = Long.numberOfTrailingZeros(captureCheck);
-                    if (bitboards.enPassant != null && bitboards.enPassant.charAt(0) - 48 == attackerIndex / 8 && bitboards.enPassant.charAt(1) - 48 == attackerIndex % 8 && (1L << index & bitboards.BP) != 0 && ((captureCheck >>> 1 & checks) != 0 || (captureCheck << 1 & checks) != 0)) {
+                    if (bitboards.enPassant != null && bitboards.enPassant.charAt(0) - 48 == attackerIndex / 8 && bitboards.enPassant.charAt(1) - 48 == attackerIndex % 8 && ((1L << index) & bitboards.BP) != 0 && (((1L << index) >>> 1 & checks) != 0 || ((1L << index) << 1 & checks) != 0)) {
                         moves += ("" + (index / 8) + (index % 8) + (attackerIndex / 8 + 1) + (attackerIndex % 8) + " ");
                     } else {
                         moves += ("" + (index / 8) + (index % 8) + (attackerIndex / 8) + (attackerIndex % 8) + " ");

@@ -13,6 +13,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import static server.MoveGenerator.CENTRE;
 import static server.MoveGenerator.generateMovesBFog;
 import static server.MoveGenerator.generateMovesWFog;
 
@@ -62,6 +63,8 @@ public class ServerThread extends Thread {
                     createLobby(line, in, out);
                 } else if (line.contains("Join lobby")) {
                     joinLobby(line, in, out);
+                } else if (line.contains("Get lobbies")) {
+                    sendLobbies(in, out);
                 } else if (line.contains(("Single player"))) {
                     createSinglePlayerGame(line, in, out);
                 }
@@ -78,6 +81,7 @@ public class ServerThread extends Thread {
         int id = Integer.valueOf(line.split(" ")[2]);
         String colorChosen = line.split(" ")[3];
         String mode = line.split(" ")[4];
+        String name = line.split(" ")[5];
         if (lobbyExists(id)) {
             out.println("Lobby already exists");
             out.flush();
@@ -89,6 +93,7 @@ public class ServerThread extends Thread {
         game.id = id;
         game.player1Color = colorChosen;
         game.mode = mode;
+        game.name = name;
         if (colorChosen.equals("black")) {
             game.player2Color = "white";
         } else {
@@ -117,6 +122,9 @@ public class ServerThread extends Thread {
                     break;
                 case "Battle":
                     startMultiplayerGameBattle(in, out);
+                    break;
+                case "King":
+                    startMultiplayerGameKing(in, out);
                     break;
                 default:
                     break;
@@ -162,6 +170,8 @@ public class ServerThread extends Thread {
                 case "Battle":
                     startMultiplayerGameBattle(in, out);
                     break;
+                case "King":
+                    startMultiplayerGameKing(in, out);
                 default:
                     break;
             }
@@ -310,6 +320,16 @@ public class ServerThread extends Thread {
                 game.gameOn.set(false);
                 break;
             }
+            if (move.equals("Suggest")) {
+                Bitboards tempBits = new Bitboards(game.bitboards);
+                PC tempPc = new PC(tempBits, -1, 8, game.mode);
+                String suggestedMove = tempPc.move();
+                out.println("Suggestion");
+                out.flush();
+                out.println(suggestedMove);
+                out.flush();
+                continue;
+            }
             for (int i = 0; i < legalMoves.length(); i += 5) {
                 if (move.equals(legalMoves.substring(i, i + 5))) {
                     MoveGenerator.makeMove(game.bitboards, move);
@@ -352,6 +372,16 @@ public class ServerThread extends Thread {
                 game.winner = "white";
                 game.gameOn.set(false);
                 break;
+            }
+            if (move.equals("Suggest")) {
+                Bitboards tempBits = new Bitboards(game.bitboards);
+                PC tempPc = new PC(tempBits, 1, 8, game.mode);
+                String suggestedMove = tempPc.move();
+                out.println("Suggestion");
+                out.flush();
+                out.println(suggestedMove);
+                out.flush();
+                continue;
             }
             move = convertToOtherSide(move);
             for (int i = 0; i < legalMoves.length(); i += 5) {
@@ -413,6 +443,7 @@ public class ServerThread extends Thread {
             game.resetBoard();
         }
         game.player1 = player;
+        game.player2 = new Player();
         game.mode = mode;
         game.gameOn.set(true);
         Utility.arrayToBitboards(game.board, game.bitboards);
@@ -433,10 +464,14 @@ public class ServerThread extends Thread {
                 depth = 8;
                 break;
         }
-        PC pc = new PC(game.bitboards, side, depth);
+        PC pc = new PC(game.bitboards, side, depth, mode);
         games.add(game);
         try {
-            startSinglePlayerGame(in, out, pc);
+            if (mode.equals("King")) {
+                startSinglePlayerGameKing(in, out, pc);
+            } else {
+                startSinglePlayerGame(in, out, pc);
+            }
         } catch (InterruptedException ex) {
             System.out.println(ex.toString());
         } finally {
@@ -462,7 +497,7 @@ public class ServerThread extends Thread {
             out.flush();
             try {
                 waitSinglePieces(in, out);
-                pc = new PC(game.bitboards, pc.side, pc.maxDepth);
+                pc = new PC(game.bitboards, pc.side, pc.maxDepth, game.mode);
             } catch (IOException ex) {
                 game.winner = game.player2Color;
                 game.player1SetPieces.set(true);
@@ -503,6 +538,86 @@ public class ServerThread extends Thread {
                 } else {
                     legalMoves = MoveGenerator.generateMovesW(game.bitboards);
                     gameOver = whiteLost(legalMoves);
+                }
+                if (gameOver == -1) {
+                    game.winner = game.player1Color;
+                    game.gameOn.set(false);
+                    break;
+                } else if (gameOver == 1) {
+                    game.winner = "draw";
+                    game.gameOn.set(false);
+                    break;
+                }
+                if (!(game.lastMove.equals("-----"))) {
+                    MoveGenerator.makeMove(pc.bitboards, game.lastMove);
+                }
+                String pcMove = pc.move();
+                MoveGenerator.makeMove(game.bitboards, pcMove);
+                Utility.bitboardsToArray(game.board, game.bitboards);
+                game.lastMove = pcMove;
+                if (game.turn.get()) {
+                    game.turn.set(false);
+                } else {
+                    game.turn.set(true);
+                }
+            }
+        }
+        String result;
+        if (game.winner.equals("draw")) {
+            result = "draw";
+        } else {
+            if (game.player1Color.equals(game.winner)) {
+                result = "victory";
+            } else {
+                result = "loss";
+            }
+        }
+        out.println(result);
+        out.flush();
+
+    }
+
+    private void startSinglePlayerGameKing(BufferedReader in, PrintWriter out, PC pc) throws InterruptedException {
+        if ("black".equals(game.player1Color)) {
+            out.println("2");
+            out.flush();
+        } else {
+            out.println("1");
+            out.flush();
+        }
+
+        if ("black".equals(game.player1Color)) {
+            sendBlackBoard(out, game.board, '1');
+        } else {
+            sendWhiteBoard(out, game.board, '1');
+        }
+
+        while (game.gameOn.get()) {
+            if (game.turn.get() && game.player1Color.equals("white")) {
+                try {
+                    playWhiteKing(in, out);
+                } catch (IOException ex) {
+                    game.winner = game.player2Color;
+                    game.gameOn.set(false);
+                    break;
+                }
+            } else if (!game.turn.get() && game.player1Color.equals("black")) {
+                try {
+                    playBlackKing(in, out);
+                } catch (IOException ex) {
+                    game.winner = game.player2Color;
+                    game.gameOn.set(false);
+                    break;
+                }
+            } else {
+                String legalMoves;
+                int gameOver;
+                if (game.player1Color.equals("white")) {
+                    legalMoves = MoveGenerator.generateMovesB(game.bitboards);
+                    gameOver = blackLostKing(legalMoves);
+                } else {
+                    legalMoves = MoveGenerator.generateMovesW(game.bitboards);
+                    gameOver = whiteLostKing(legalMoves);
                 }
                 if (gameOver == -1) {
                     game.winner = game.player1Color;
@@ -956,7 +1071,7 @@ public class ServerThread extends Thread {
                     out.flush();
                     return false;
                 } else if (String.valueOf(line.charAt(i - 8)).equals(" ")) {
-                    out.println("Kist must have a piece in front of it.");
+                    out.println("King must have a piece in front of it.");
                     out.flush();
                     return false;
                 }
@@ -995,7 +1110,7 @@ public class ServerThread extends Thread {
                     out.flush();
                     return false;
                 } else if (String.valueOf(line.charAt(i + 8)).equals(" ")) {
-                    out.println("Kist must have a piece in front of it.");
+                    out.println("King must have a piece in front of it.");
                     out.flush();
                     return false;
                 }
@@ -1047,5 +1162,233 @@ public class ServerThread extends Thread {
 
         }
         Utility.arrayToBitboards(game.board, game.bitboards);
+    }
+
+    private void startMultiplayerGameKing(BufferedReader in, PrintWriter out) throws InterruptedException {
+
+        if (player == game.player1) {
+            if ("black".equals(game.player1Color)) {
+                out.println("2");
+                out.flush();
+                sendBlackBoard(out, game.board, '1');
+            } else {
+                out.println("1");
+                out.flush();
+                sendWhiteBoard(out, game.board, '1');
+            }
+        } else {
+            if ("black".equals(game.player1Color)) {
+                out.println("1");
+                out.flush();
+                sendWhiteBoard(out, game.board, '1');
+            } else {
+                out.println("2");
+                out.flush();
+                sendBlackBoard(out, game.board, '1');
+            }
+        }
+        while (game.gameOn.get()) {
+            if (player == game.player1) {
+                try {
+                    if ("black".equals(game.player1Color)) {
+                        playBlackKing(in, out);
+                    } else {
+                        playWhiteKing(in, out);
+                    }
+                } catch (IOException ex) {
+                    game.winner = game.player2Color;
+                    game.gameOn.set(false);
+                }
+            } else if (player == game.player2) {
+                try {
+                    if ("black".equals(game.player2Color)) {
+                        playBlackKing(in, out);
+                    } else {
+                        playWhiteKing(in, out);
+                    }
+                } catch (IOException ex) {
+                    game.winner = game.player1Color;
+                    game.gameOn.set(false);
+                }
+            }
+        }
+        String result;
+        if (game.winner.equals("draw")) {
+            result = "draw";
+        } else {
+            if (game.player1 == player) {
+                if (game.winner.equals(game.player1Color)) {
+                    result = "victory";
+                } else {
+                    result = "loss";
+                }
+            } else {
+                if (game.winner.equals(game.player2Color)) {
+                    result = "victory";
+                } else {
+                    result = "loss";
+                }
+            }
+        }
+        out.println(result);
+        out.flush();
+    }
+
+    private void playWhiteKing(BufferedReader in, PrintWriter out) throws InterruptedException, IOException {
+        String move;
+        String legalMoves;
+        while (!game.turn.get() && game.gameOn.get()) {
+            Thread.sleep(100);
+        }
+        if (!game.gameOn.get()) {
+            return;
+        }
+        sendWhiteBoard(out, game.board, '1');
+        legalMoves = MoveGenerator.generateMovesW(game.bitboards);
+        int gameOver = whiteLostKing(legalMoves);
+        if (gameOver == -1) {
+            game.winner = "black";
+            game.gameOn.set(false);
+            return;
+        } else if (gameOver == 1) {
+            game.winner = "draw";
+            game.gameOn.set(false);
+            return;
+        }
+        boolean legal = false;
+        while (!legal) {
+            move = in.readLine();
+            if (move.equals("Quit") || move.equals("Resign")) {
+                game.winner = "black";
+                game.gameOn.set(false);
+                break;
+            }
+            if (move.equals("Suggest")) {
+                Bitboards tempBits = new Bitboards(game.bitboards);
+                PC tempPc = new PC(tempBits, -1, 8, game.mode);
+                String suggestedMove = tempPc.move();
+                out.println("Suggestion");
+                out.flush();
+                out.println(suggestedMove);
+                out.flush();
+                continue;
+            }
+            for (int i = 0; i < legalMoves.length(); i += 5) {
+                if (move.equals(legalMoves.substring(i, i + 5))) {
+                    MoveGenerator.makeMove(game.bitboards, move);
+                    Utility.bitboardsToArray(game.board, game.bitboards);
+                    game.lastMove = move;
+                    sendWhiteBoard(out, game.board, '2');
+                    legal = true;
+                    game.turn.set(false);
+                    break;
+                }
+            }
+        }
+    }
+
+    private void playBlackKing(BufferedReader in, PrintWriter out) throws InterruptedException, IOException {
+        String move;
+        String legalMoves;
+        while (game.turn.get() && game.gameOn.get()) {
+            Thread.sleep(100);
+        }
+        if (!game.gameOn.get()) {
+            return;
+        }
+        sendBlackBoard(out, game.board, '2');
+        legalMoves = MoveGenerator.generateMovesB(game.bitboards);
+        int gameOver = blackLostKing(legalMoves);
+        if (gameOver == -1) {
+            game.winner = "white";
+            game.gameOn.set(false);
+            return;
+        } else if (gameOver == 1) {
+            game.winner = "draw";
+            game.gameOn.set(false);
+            return;
+        }
+        boolean legal = false;
+        while (!legal) {
+            move = in.readLine();
+            if (move.equals("Quit") || move.equals("Resign")) {
+                game.winner = "white";
+                game.gameOn.set(false);
+                break;
+            }
+            if (move.equals("Suggest")) {
+                Bitboards tempBits = new Bitboards(game.bitboards);
+                PC tempPc = new PC(tempBits, 1, 8, game.mode);
+                String suggestedMove = tempPc.move();
+                out.println("Suggestion");
+                out.flush();
+                out.println(suggestedMove);
+                out.flush();
+                continue;
+            }
+            move = convertToOtherSide(move);
+            for (int i = 0; i < legalMoves.length(); i += 5) {
+                if (move.equals(legalMoves.substring(i, i + 5))) {
+                    MoveGenerator.makeMove(game.bitboards, move);
+                    Utility.bitboardsToArray(game.board, game.bitboards);
+                    game.lastMove = move;
+                    sendBlackBoard(out, game.board, '1');
+                    legal = true;
+                    game.turn.set(true);
+                    break;
+                }
+            }
+        }
+    }
+
+    private int whiteLostKing(String legalMoves) {
+        if ((CENTRE & game.bitboards.BK) != 0) {
+            return -1;
+        }
+        if (legalMoves.isEmpty()) {
+            if (MoveGenerator.attackerBoardW(game.bitboards, game.bitboards.WK) == 0) {
+                return 1;
+            } else {
+                return -1;
+            }
+        }
+        return 0;
+    }
+
+    private int blackLostKing(String legalMoves) {
+        if ((CENTRE & game.bitboards.WK) != 0) {
+            return -1;
+        }
+        if (legalMoves.isEmpty()) {
+            if (MoveGenerator.attackerBoardB(game.bitboards, game.bitboards.BK) == 0) {
+                return 1;
+            } else {
+                return -1;
+            }
+        }
+        return 0;
+    }
+
+    private void sendLobbies(BufferedReader in, PrintWriter out) {
+        String openGames = "";
+        synchronized (games) {
+            for (Game g : games) {
+                if (g.player2 == null) {
+                    String mod;
+                    if (g.mode.equals("King")) {
+                        mod = "King@of@The@Hill";
+                    } else if(g.mode.equals("Fog")) {
+                        mod = "Fog@of@War";
+                    } else if(g.mode.equals("Battle")) {
+                        mod = "Battle@Plan";
+                    } else {
+                        mod = "Regular";
+                    }
+                    openGames += g.id + " " + g.name + " " + mod + " " + g.player1Color + "/";
+                }
+            }
+        }
+        out.println(openGames);
+        out.flush();
     }
 }

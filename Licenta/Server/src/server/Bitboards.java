@@ -17,6 +17,7 @@ public class Bitboards {
     boolean castle[] = {true, true, true, true};
     String enPassant = null;
     long hashKey = 0L;
+    char stage = '1';
 
     Bitboards() {
 
