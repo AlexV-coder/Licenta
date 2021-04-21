@@ -172,7 +172,6 @@ public class ClientThread extends Thread {
             }
 
         } catch (IOException ex) {
-            System.out.println("First:");
             System.out.println(ex.toString());
         }
     }
@@ -287,97 +286,112 @@ public class ClientThread extends Thread {
         drawBoard(gc);
         drawPieces(gc);
         canvas.setOnMouseClicked(event -> {
-            try {
-                if (playerNr == turn) {
-                    int row = (int) event.getY() / 100;
-                    int col = (int) event.getX() / 100;
-                    if (selectedSquare == null) {
-                        if (board[row][col].charAt(0) >= 'A' && board[row][col].charAt(0) <= 'Z' && turn == '1') {
-                            selectedSquare = String.valueOf(row) + String.valueOf(col);
-                        } else if (board[row][col].charAt(0) >= 'a' && board[row][col].charAt(0) <= 'z' && turn == '2') {
-                            selectedSquare = String.valueOf(row) + String.valueOf(col);
-                        }
+            if (playerNr == turn) {
+                int row = (int) event.getY() / 100;
+                int col = (int) event.getX() / 100;
+                if (selectedSquare == null) {
+                    if (board[row][col].charAt(0) >= 'A' && board[row][col].charAt(0) <= 'Z' && turn == '1') {
+                        selectedSquare = String.valueOf(row) + String.valueOf(col);
+                        highlightSquare();
+                    } else if (board[row][col].charAt(0) >= 'a' && board[row][col].charAt(0) <= 'z' && turn == '2') {
+                        selectedSquare = String.valueOf(row) + String.valueOf(col);
+                        highlightSquare();
+                    }
+                } else {
+                    String newSquare = String.valueOf(row) + String.valueOf(col);
+                    if (turn == '1' && board[row][col].charAt(0) >= 'A' && board[row][col].charAt(0) <= 'Z') {
+                        unhighlightSquare();
+                        selectedSquare = newSquare;
+                        highlightSquare();
+                    } else if (turn == '2' && board[row][col].charAt(0) >= 'a' && board[row][col].charAt(0) <= 'z') {
+                        unhighlightSquare();
+                        selectedSquare = newSquare;
+                        highlightSquare();
                     } else {
-                        String newSquare = String.valueOf(row) + String.valueOf(col);
-                        if (turn == '1' && board[row][col].charAt(0) >= 'A' && board[row][col].charAt(0) <= 'Z') {
-                            selectedSquare = newSquare;
-                        } else if (turn == '2' && board[row][col].charAt(0) >= 'a' && board[row][col].charAt(0) <= 'z') {
-                            selectedSquare = newSquare;
-                        } else {
-                            String move = selectedSquare + newSquare;
-                            if (board[selectedSquare.charAt(0) - 48][selectedSquare.charAt(1) - 48].toLowerCase().equals("p") && (newSquare.charAt(0) - 48 == 0 || newSquare.charAt(0) - 48 == 7)) {
-                                PopUpFrame popup = new PopUpFrame(turn, this);
-                                try {
-                                    Stage newStage = popup.getStage(new Stage());
-                                    newStage.setAlwaysOnTop(true);
-                                    newStage.showAndWait();
-                                } catch (Exception ex) {
-                                    System.out.println(ex.toString());
-                                }
-                                move += promote;
-                                promote = ' ';
-                            } else {
-                                move += ' ';
+                        String move = selectedSquare + newSquare;
+                        if (board[selectedSquare.charAt(0) - 48][selectedSquare.charAt(1) - 48].toLowerCase().equals("p") && (newSquare.charAt(0) - 48 == 0 || newSquare.charAt(0) - 48 == 7)) {
+                            PopUpFrame popup = new PopUpFrame(turn, this);
+                            try {
+                                Stage newStage = popup.getStage(new Stage());
+                                newStage.setAlwaysOnTop(true);
+                                newStage.showAndWait();
+                            } catch (Exception ex) {
+                                System.out.println(ex.toString());
                             }
-                            out.println(move);
-                            out.flush();
+                            move += promote;
+                            promote = ' ';
+                        } else {
+                            move += ' ';
                         }
+                        out.println(move);
+                        out.flush();
                     }
                 }
-            } catch (Exception ex) {
-                System.out.println("Second:");
-                System.out.println(ex.toString());
             }
         });
         return currentStackPane;
     }
 
     private void drawBoard(GraphicsContext gc) {
-        try {
-            for (int i = 0; i < 8; i++) {
-                for (int j = 0; j < 8; j++) {
-                    if ((i + j) % 2 == 1) {
-                        gc.setFill(Color.rgb(210, 105, 30));
-                    } else {
-                        gc.setFill(Color.rgb(255, 222, 173));
-                    }
-                    gc.fillRect(j * 100, i * 100, 100, 100);
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                if ((i + j) % 2 == 1) {
+                    gc.setFill(Color.rgb(210, 105, 30));
+                } else {
+                    gc.setFill(Color.rgb(255, 222, 173));
                 }
+                gc.fillRect(j * 100, i * 100, 100, 100);
             }
-            if (!(lastMove.equals("-----"))) {
-                int oldSquareX = lastMove.charAt(0) - 48;
-                int oldSquareY = lastMove.charAt(1) - 48;
-                int newSquareX = lastMove.charAt(2) - 48;
-                int newSquareY = lastMove.charAt(3) - 48;
-                gc.setFill(Color.RED);
-                gc.fillRect(oldSquareY * 100, oldSquareX * 100, 100, 100);
-                gc.fillRect(newSquareY * 100, newSquareX * 100, 100, 100);
-            }
-        } catch (Exception ex) {
-            System.out.println("Third");
-            System.out.println(ex.toString());
+        }
+        if (!(lastMove.equals("-----"))) {
+            int oldSquareX = lastMove.charAt(0) - 48;
+            int oldSquareY = lastMove.charAt(1) - 48;
+            int newSquareX = lastMove.charAt(2) - 48;
+            int newSquareY = lastMove.charAt(3) - 48;
+            gc.setFill(Color.RED);
+            gc.fillRect(oldSquareY * 100, oldSquareX * 100, 100, 100);
+            gc.fillRect(newSquareY * 100, newSquareX * 100, 100, 100);
         }
     }
 
     private void drawPieces(GraphicsContext gc) {
-        try {
-            for (int i = 0; i < 8; i++) {
-                for (int j = 0; j < 8; j++) {
-                    if (board[i][j].equals("0")) {
-                        if ((i + j) % 2 == 1) {
-                            gc.setFill(Color.rgb((int) (210 * 0.15), (int) (105 * 0.15), (int) (30 * 0.15)));
-                        } else {
-                            gc.setFill(Color.rgb((int) (255 * 0.15), (int) (222 * 0.15), (int) (173 * 0.15)));
-                        }
-                        gc.fillRect(j * 100, i * 100, 100, 100);
-                    } else if (!" ".equals(board[i][j])) {
-                        gc.drawImage(images.get(board[i][j].charAt(0)), j * 100, i * 100, 100, 100);
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                if (board[i][j].equals("0")) {
+                    if ((i + j) % 2 == 1) {
+                        gc.setFill(Color.rgb((int) (210 * 0.15), (int) (105 * 0.15), (int) (30 * 0.15)));
+                    } else {
+                        gc.setFill(Color.rgb((int) (255 * 0.15), (int) (222 * 0.15), (int) (173 * 0.15)));
                     }
+                    gc.fillRect(j * 100, i * 100, 100, 100);
+                } else if (!" ".equals(board[i][j])) {
+                    gc.drawImage(images.get(board[i][j].charAt(0)), j * 100, i * 100, 100, 100);
                 }
             }
-        } catch (Exception ex) {
-            System.out.println("Fourth");
-            System.out.println(ex.toString());
+        }
+    }
+
+    private void highlightSquare() {
+        int x = selectedSquare.charAt(0) - 48;
+        int y = selectedSquare.charAt(1) - 48;
+        gc.setFill(Color.GREEN);
+        gc.fillRect(y * 100, x * 100, 100, 100);
+        if (!board[x][y].equals(" ")) {
+            gc.drawImage(images.get(board[x][y].charAt(0)), y * 100, x * 100, 100, 100);
+        }
+    }
+
+    private void unhighlightSquare() {
+        int x = selectedSquare.charAt(0) - 48;
+        int y = selectedSquare.charAt(1) - 48;
+        if ((x + y) % 2 == 1) {
+            gc.setFill(Color.rgb(210, 105, 30));
+        } else {
+            gc.setFill(Color.rgb(255, 222, 173));
+        }
+        gc.fillRect(y * 100, x * 100, 100, 100);
+        if (!board[x][y].equals(" ")) {
+            gc.drawImage(images.get(board[x][y].charAt(0)), y * 100, x * 100, 100, 100);
         }
     }
 
@@ -433,39 +447,34 @@ public class ClientThread extends Thread {
     }
 
     private StackPane getPostMatchMenu(Stage stage, String result) {
-        try {
-            Button back = new Button();
-            Text txt = new Text(" " + result + " ");
-            txt.setFont(Font.font("Verdana", FontPosture.ITALIC, 25));
-            VBox textContainer = new VBox();
-            textContainer.setMaxSize(130, 100);
-            textContainer.setStyle("-fx-background-color: rgba(165, 111, 38, 0.7); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50;");
-            textContainer.getChildren().add(txt);
-            back.setOnMouseClicked(e -> {
-                stage.getScene().setRoot(root);
+        Button back = new Button();
+        Text txt = new Text(" " + result + " ");
+        txt.setFont(Font.font("Verdana", FontPosture.ITALIC, 25));
+        VBox textContainer = new VBox();
+        textContainer.setMaxSize(130, 100);
+        textContainer.setStyle("-fx-background-color: rgba(165, 111, 38, 0.7); -fx-border-radius: 50 50 50 50; -fx-background-radius: 50 50 50 50;");
+        textContainer.getChildren().add(txt);
+        back.setOnMouseClicked(e -> {
+            stage.getScene().setRoot(root);
+        });
+        ImageView imageView = new ImageView();
+        File file = new File("back.png");
+        Image image = new Image(file.toURI().toString());
+        imageView.setImage(image);
+        back.setGraphic(imageView);
+        back.setPadding(new Insets(10, 10, 10, 10));
+        back.setStyle("-fx-base: rgba(139, 69, 19, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt; -fx-background-radius: 50 50 50 50;");
+        currentStackPane.getChildren().stream().filter((n) -> (n instanceof VBox)).forEachOrdered((n) -> {
+            ((VBox) n).getChildren().stream().filter((m) -> (m instanceof HBox)).forEachOrdered((Node m) -> {
+                if (((HBox) m).getChildren().get(0) instanceof Button) {
+                    ((HBox) m).setMaxWidth(((HBox) m).getWidth() + 150);
+                    Platform.runLater(() -> {
+                        ((VBox) n).getChildren().add(textContainer);
+                        ((HBox) m).getChildren().add(back);
+                    });
+                }
             });
-            ImageView imageView = new ImageView();
-            File file = new File("back.png");
-            Image image = new Image(file.toURI().toString());
-            imageView.setImage(image);
-            back.setGraphic(imageView);
-            back.setPadding(new Insets(10, 10, 10, 10));
-            back.setStyle("-fx-base: rgba(139, 69, 19, 0.89);-fx-faint-focus-color: transparent; -fx-focus-color:rgba(125, 96, 32, 1); -fx-font-weight: bold; -fx-font-size: 11pt; -fx-background-radius: 50 50 50 50;");
-            currentStackPane.getChildren().stream().filter((n) -> (n instanceof VBox)).forEachOrdered((n) -> {
-                ((VBox) n).getChildren().stream().filter((m) -> (m instanceof HBox)).forEachOrdered((Node m) -> {
-                    if (((HBox) m).getChildren().get(0) instanceof Button) {
-                        ((HBox) m).setMaxWidth(((HBox) m).getWidth() + 150);
-                        Platform.runLater(() -> {
-                            ((VBox) n).getChildren().add(textContainer);
-                            ((HBox) m).getChildren().add(back);
-                        });
-                    }
-                });
-            });
-        } catch (Exception ex) {
-            System.out.println("Fifth:");
-            System.out.println(ex.toString());
-        }
+        });
         return currentStackPane;
     }
 

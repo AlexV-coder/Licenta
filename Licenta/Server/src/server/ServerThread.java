@@ -1375,14 +1375,19 @@ public class ServerThread extends Thread {
             for (Game g : games) {
                 if (g.player2 == null) {
                     String mod;
-                    if (g.mode.equals("King")) {
-                        mod = "King@of@The@Hill";
-                    } else if(g.mode.equals("Fog")) {
-                        mod = "Fog@of@War";
-                    } else if(g.mode.equals("Battle")) {
-                        mod = "Battle@Plan";
-                    } else {
-                        mod = "Regular";
+                    switch (g.mode) {
+                        case "King":
+                            mod = "King@of@The@Hill";
+                            break;
+                        case "Fog":
+                            mod = "Fog@of@War";
+                            break;
+                        case "Battle":
+                            mod = "Battle@Plan";
+                            break;
+                        default:
+                            mod = "Regular";
+                            break;
                     }
                     openGames += g.id + " " + g.name + " " + mod + " " + g.player1Color + "/";
                 }

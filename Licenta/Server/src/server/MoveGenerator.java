@@ -1668,6 +1668,16 @@ public class MoveGenerator {
         return kingAttacks != 0;
     }
 
+    public static long whiteKingVicinity(Bitboards bitboards) {
+        long WK = bitboards.WK;
+        return ((WK >>> 1 & ~FILE_H) | (WK << 1 & ~FILE_A) | (WK >>> 8 & ~RANK_1) | (WK << 8 & ~RANK_8) | (WK >>> 7 & ~RANK_1 & ~FILE_A) | (WK << 7 & ~FILE_H & ~RANK_8) | (WK >>> 9 & ~FILE_H & ~RANK_1) | (WK << 9 & ~RANK_8 & ~FILE_A));
+    }
+
+    public static long blackKingVicinity(Bitboards bitboards) {
+        long BK = bitboards.BK;
+        return ((BK >>> 1 & ~FILE_H) | (BK << 1 & ~FILE_A) | (BK >>> 8 & ~RANK_1) | (BK << 8 & ~RANK_8) | (BK >>> 7 & ~RANK_1 & ~FILE_A) | (BK << 7 & ~FILE_H & ~RANK_8) | (BK >>> 9 & ~FILE_H & ~RANK_1) | (BK << 9 & ~RANK_8 & ~FILE_A));
+    }
+
     static String generateMovesWFog(Bitboards bitboards) {
         String moves = "";
         moves = moves.concat(generatePawnMovesW(bitboards));
