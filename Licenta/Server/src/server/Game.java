@@ -16,11 +16,14 @@ public class Game {
     Player player1;
     Player player2;
     Bitboards bitboards;
+    
     AtomicBoolean gameOn;
     AtomicBoolean turn;
     AtomicBoolean player1SetPieces;
     AtomicBoolean player2SetPieces;
+    
     int id;
+    
     String winner;
     String player1Color;
     String player2Color;

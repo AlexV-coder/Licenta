@@ -292,21 +292,21 @@ public class ClientThread extends Thread {
                 if (selectedSquare == null) {
                     if (board[row][col].charAt(0) >= 'A' && board[row][col].charAt(0) <= 'Z' && turn == '1') {
                         selectedSquare = String.valueOf(row) + String.valueOf(col);
-                        highlightSquare();
+                        highlightSquare(gc);
                     } else if (board[row][col].charAt(0) >= 'a' && board[row][col].charAt(0) <= 'z' && turn == '2') {
                         selectedSquare = String.valueOf(row) + String.valueOf(col);
-                        highlightSquare();
+                        highlightSquare(gc);
                     }
                 } else {
                     String newSquare = String.valueOf(row) + String.valueOf(col);
                     if (turn == '1' && board[row][col].charAt(0) >= 'A' && board[row][col].charAt(0) <= 'Z') {
-                        unhighlightSquare();
+                        unhighlightSquare(gc);
                         selectedSquare = newSquare;
-                        highlightSquare();
+                        highlightSquare(gc);
                     } else if (turn == '2' && board[row][col].charAt(0) >= 'a' && board[row][col].charAt(0) <= 'z') {
-                        unhighlightSquare();
+                        unhighlightSquare(gc);
                         selectedSquare = newSquare;
-                        highlightSquare();
+                        highlightSquare(gc);
                     } else {
                         String move = selectedSquare + newSquare;
                         if (board[selectedSquare.charAt(0) - 48][selectedSquare.charAt(1) - 48].toLowerCase().equals("p") && (newSquare.charAt(0) - 48 == 0 || newSquare.charAt(0) - 48 == 7)) {
@@ -371,7 +371,7 @@ public class ClientThread extends Thread {
         }
     }
 
-    private void highlightSquare() {
+    private void highlightSquare(GraphicsContext gc) {
         int x = selectedSquare.charAt(0) - 48;
         int y = selectedSquare.charAt(1) - 48;
         gc.setFill(Color.GREEN);
@@ -381,7 +381,7 @@ public class ClientThread extends Thread {
         }
     }
 
-    private void unhighlightSquare() {
+    private void unhighlightSquare(GraphicsContext gc) {
         int x = selectedSquare.charAt(0) - 48;
         int y = selectedSquare.charAt(1) - 48;
         if ((x + y) % 2 == 1) {
@@ -684,6 +684,9 @@ public class ClientThread extends Thread {
                 }
             }
         }
+        if (selectedSquare != null) {
+            highlightSquareBattlePlan(gc1);
+        }
     }
 
     private void showHistory() {
@@ -918,5 +921,15 @@ public class ClientThread extends Thread {
         double[] xs = {x3, x4, x5};
         double[] ys = {y3, y4, y5};
         gc.fillPolygon(xs, ys, 3);
+    }
+
+    private void highlightSquareBattlePlan(GraphicsContext gc1) {
+        int x = selectedSquare.charAt(0) - 48;
+        int y = selectedSquare.charAt(1) - 48;
+        gc1.setFill(Color.GREEN);
+        if (!customBoard[x][y].equals(" ")) {
+            gc1.fillRect(y * 100, (x + 6) * 100, 100, 100);
+            gc1.drawImage(images.get(customBoard[x][y].charAt(0)), y * 100, (x + 6) * 100, 100, 100);
+        }
     }
 }

@@ -5,8 +5,6 @@
  */
 package server;
 
-import java.util.Arrays;
-
 /**
  *
  * @author Alex
@@ -20,8 +18,6 @@ public class TableEntry {
     public String enPassant = null;
     public boolean[] castle = {true, true, true, true};
     public int pruneType;
-    public int age = 0;
-    Bitboards bitboards;
 
     TableEntry(boolean t, int d, String b, int s, String enP, boolean[] cstl, int p) {
         turn = t;
@@ -34,10 +30,5 @@ public class TableEntry {
         castle[2] = cstl[2];
         castle[3] = cstl[3];
         pruneType = p;
-    }
-
-    @Override
-    public String toString() {
-        return "TableEntry{" + "turn=" + turn + ", depth=" + depth + ", bestMove=" + bestMove + ", score=" + score + ", enPassant=" + enPassant + ", castle=" + Arrays.toString(castle) + '}';
     }
 }

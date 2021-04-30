@@ -5,31 +5,11 @@
  */
 package server;
 
-import java.util.Arrays;
-
 /**
  *
  * @author Alex
  */
 public class Utility {
-
-    public static void drawBitboard(long bitBoard) {
-        String board[][] = new String[8][8];
-        for (int i = 0; i < 64; i++) {
-            board[i / 8][i % 8] = "";
-        }
-        for (int i = 0; i < 64; i++) {
-            if (((bitBoard >>> i) & 1) == 1) {
-                board[i / 8][i % 8] = "P";
-            }
-            if ("".equals(board[i / 8][i % 8])) {
-                board[i / 8][i % 8] = " ";
-            }
-        }
-        for (int i = 0; i < 8; i++) {
-            System.out.println(Arrays.toString(board[i]));
-        }
-    }
 
     public static void arrayToBitboards(String[][] board, Bitboards bitboards) {
         String Binary;
@@ -180,41 +160,6 @@ public class Utility {
         moveString += "" + ('8' - move.charAt(2));
         moveString += move.charAt(4);
         return moveString;
-    }
-
-    static String notationToMove(String move) {
-        String moveString = "";
-        moveString += String.valueOf(Math.abs(move.charAt(1) - '8'));
-        moveString += (move.charAt(0) - 49 - 48);
-        moveString += String.valueOf(Math.abs(move.charAt(3) - '8'));
-        moveString += (move.charAt(2) - 49 - 48);
-        moveString += move.charAt(4);
-        return moveString;
-    }
-
-    public static long getNrOfMoves(Bitboards bitboards, int depth, int max_depth) {
-        String moves;
-        if (bitboards.turn) {
-            moves = MoveGenerator.generateMovesW(bitboards);
-        } else {
-            moves = MoveGenerator.generateMovesB(bitboards);
-        }
-        if (depth == max_depth) {
-            return moves.length() / 5;
-        }
-        int nr = 0;
-        int movesLength = moves.length();
-        for (int i = 0; i < movesLength; i += 5) {
-            Bitboards aux = new Bitboards(bitboards);
-            String move = moves.substring(i, i + 5);
-            MoveGenerator.makeMove(aux, move);
-            long n = getNrOfMoves(aux, depth + 1, max_depth);
-            if (depth == 1) {
-                System.out.println(Utility.moveToNotation(move) + ": " + n);
-            }
-            nr += n;
-        }
-        return nr;
     }
 
     static void transpose(double[] val1, double[] val2) {

@@ -87,6 +87,7 @@ public class Client extends Application {
         Scene scene = new Scene(root);
         stage.setOnCloseRequest(e -> {
             try {
+                stage.close();
                 out.println("Quit");
                 out.flush();
                 socket.close();
